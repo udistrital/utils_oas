@@ -11,7 +11,7 @@ Basic example for creating middlewares in Beego framework.
 Standard `go get`:
 
 ```
-$ go get github.com/ojardila/beego_middleware
+$ go get github.com/udistrital/auditoria
 ```
 
 #### Dependencies
@@ -26,10 +26,10 @@ Add the following lines into the ```routers/routers.go``` file which will initia
 
 
 ```go
- import "github.com/ojardila/beego_middleware"
+ import "github.com/udistrital/auditoria"
 
  func init() {
-    beego_keenio.InitMiddleware()
+    auditoria.InitMiddleware()
 
 
  }
