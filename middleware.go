@@ -63,12 +63,6 @@ func FunctionAfterExec(ctx *context.Context) {
 
 	var mensaje = fmt.Sprintf("{'FechaOperacion': '%s', 'User': 'userWSO2', 'IpUser': '%s', 'UrlService': '%s', 'Método': '%s', 'HostApi': '%s' ,'DataUser':'%s', 'DataResponse':'%s', 'ApiName':'%s'}", now, ip_user, url, metodo, host, data_user, data_response["json"], app[0])
 
-	//var mensaje_cool = "Fecha Transacción: " + now + ", User: , IP Usuario: " + ip_user + ", Url servicio: " + url + ", Host Api: " + host + ", Data enviada por usuario: " + data_user + ", Método: " + metodo
-
-	beego.Info(mensaje)
-
-	fmt.Println(mensaje)
-	//fmt.Println(prueba)
 	sentToRabbit(mensaje)
 
 }
