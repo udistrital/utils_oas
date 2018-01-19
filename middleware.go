@@ -49,21 +49,22 @@ func FunctionAfterExec(ctx *context.Context) {
 	//Variable que contiene el nombre del API al que se le hace la petición
 	app := beego.AppConfig.Strings("appname")
 
-	fmt.Println("Nombre API: " + app[0])              //Nombre del API al que se le hace la petición
+	/*fmt.Println("Nombre API: " + app[0])              //Nombre del API al que se le hace la petición
 	fmt.Println("La fecha de la petición es: " + now) //Fecha de transacción
-	//fmt.Println("Este es el query ", ctx.Request.URL.Query().Get("auth"))---> Usuario quien hace la petición WSO2
+	fmt.Println("Este es el query ", ctx.Request.URL.Query().Get("auth"))---> Usuario quien hace la petición WSO2
 	fmt.Println("Este es la IP del usuario que hace la petición: " + ctx.Input.IP())
 	fmt.Println("Este es la URL del servicio a la que se le hace la petición: " + ctx.Request.URL.String()) //URL de la petición
 	fmt.Println("Este es el método de la petición: " + ctx.Request.Method)                                  //Método de la petición
 	fmt.Println("Este es el host del api: " + ctx.Request.Host)                                             //Host desde el que se hace la petición
 	fmt.Println("Data enviada por el usuario:" + data_user)                                                 //Data enviada por el usuario
 	fmt.Println(data_response["json"])                                                                      //En las peticiones get y post se ve la data, devuelve OK cuando se hace un post o un delete
-
-	beego.Info("beego.AfterExec: After executing Controller")
+	*/
 
 	var mensaje = fmt.Sprintf("{'FechaOperacion': '%s', 'User': 'userWSO2', 'IpUser': '%s', 'UrlService': '%s', 'Método': '%s', 'HostApi': '%s' ,'DataUser':'%s', 'DataResponse':'%s', 'ApiName':'%s'}", now, ip_user, url, metodo, host, data_user, data_response["json"], app[0])
 
 	sentToRabbit(mensaje)
+
+	beego.Info("Petición auditada")
 
 }
 
