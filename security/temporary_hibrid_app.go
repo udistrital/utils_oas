@@ -11,7 +11,8 @@ import (
 
 func SecurityHivridApp(user, token, hash string) (answer bool, err error) {
 	var hashGenerated string
-	if hashGenerated, err = GeneratedHash(user, token); err == nil { // Paso 1 generar Hash
+	// Paso 1 generar Hash
+	if hashGenerated, err = GeneratedHash(user, token); err == nil {
 		//println(hashGenerated, hash)
 		// Paso 2 Validar que el hash sea el esperado
 		if hashGenerated == hash {
