@@ -1,4 +1,4 @@
-package tools
+package ruler
 
 import (
 	"errors"
@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego"
-	//."github.com/mndrix/golog"
 	. "github.com/mndrix/golog"
 	"github.com/udistrital/api_mid_financiera/models"
-	"github.com/udistrital/api_mid_financiera/utilidades"
+	"github.com/udistrital/utils_oas/formatdata"
+	"github.com/udistrital/utils_oas/request"
 )
 
 type EntornoReglas struct {
@@ -19,7 +19,7 @@ type EntornoReglas struct {
 
 func (e *EntornoReglas) Agregar_dominio(dominio string) {
 	var v []models.Predicado
-	if err := getJson("http://"+beego.AppConfig.String("Urlruler")+":"+beego.AppConfig.String("Portruler")+"/"+beego.AppConfig.String("Nsruler")+"/predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
+	if err := request.getJson("http://"+beego.AppConfig.String("Urlruler")+":"+beego.AppConfig.String("Portruler")+"/"+beego.AppConfig.String("Nsruler")+"/predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
 		for i := 0; i < len(v); i++ {
 			e.base = e.base + v[i].Nombre + "\n"
 		}
@@ -58,7 +58,7 @@ func (e *EntornoReglas) Agregar_predicado_dinamico(predicados ...string) (err er
 				}
 				fmt.Println("http://" + beego.AppConfig.String(service) + route + "?limit=-1" + sort)
 				var serviceresult []map[string]interface{}
-				if err = getJson("http://"+beego.AppConfig.String(service)+route+"?limit=-1"+sort, &serviceresult); err == nil {
+				if err = request.getJson("http://"+beego.AppConfig.String(service)+route+"?limit=-1"+sort, &serviceresult); err == nil {
 					//result[]
 					fmt.Println("res ", vr)
 					for _, res := range serviceresult {
@@ -69,18 +69,18 @@ func (e *EntornoReglas) Agregar_predicado_dinamico(predicados ...string) (err er
 									for index, mp := range values {
 										if index != 0 {
 											var aux map[string]interface{}
-											err = utilidades.FillStruct(finalvalue, &aux)
+											err = formatdata.FillStruct(finalvalue, &aux)
 											fmt.Println("finalvalue ", finalvalue)
 											if err != nil {
 												return
 											}
-											err = utilidades.FillStruct(aux[mp], &finalvalue)
+											err = formatdata.FillStruct(aux[mp], &finalvalue)
 											fmt.Println("finalvalue ", finalvalue)
 											if err != nil {
 												return
 											}
 										} else {
-											err = utilidades.FillStruct(res[mp], &finalvalue)
+											err = formatdata.FillStruct(res[mp], &finalvalue)
 											fmt.Println("finalvalue1 ", finalvalue)
 											if err != nil {
 												return
@@ -156,7 +156,7 @@ func CargarReglasBase(dominio string) (reglas string) {
 	var v []models.Predicado
 
 	fmt.Println(dominio)
-	if err := getJson("http://"+beego.AppConfig.String("Urlruler")+":"+beego.AppConfig.String("Portruler")+"/"+beego.AppConfig.String("Nsruler")+"/predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
+	if err := request.getJson("http://"+beego.AppConfig.String("Urlruler")+":"+beego.AppConfig.String("Portruler")+"/"+beego.AppConfig.String("Nsruler")+"/predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
 
 		reglasbase = reglasbase + FormatoReglas(v) //funcion general para dar formato a reglas cargadas desde el ruler
 	} else {
