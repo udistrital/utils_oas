@@ -7,6 +7,7 @@ import (
 	"errors"
 
 	"github.com/astaxie/beego"
+	"github.com/udistrital/utils_oas/request"
 )
 
 func SecurityHivridApp(user, token, hash string) (answer bool, err error) {
@@ -42,4 +43,12 @@ func GeneratedHash(user, token string) (outputHash string, err error) {
 		err = errors.New("secret not defined")
 	}
 	return
+}
+
+func GetSesionAcademica(token string) (sesion bool) {
+	var dataSeion []interface{}
+	if err := request.GetJson("http://jbpm.udistritaloas.edu.co:8280/services/uranoPruebasProxy/get_usuario_session/"+token, &dataSeion); err == nil && dataSeion != nil {
+		beego.Info(dataSeion)
+	}
+
 }
