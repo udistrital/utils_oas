@@ -4,6 +4,19 @@ import (
 	"sync"
 )
 
+//funcion para generar canales de interface{}
+func GenChanInterface(mp ...interface{}) <-chan interface{} {
+	out := make(chan interface{})
+	go func() {
+		for _, ch := range mp {
+			out <- ch
+		}
+		close(out)
+	}()
+	return out
+}
+
+
 func digester(done <-chan interface{}, f func(interface{}, ...interface{}) interface{}, params []interface{}, in <-chan interface{}, out chan<- interface{}) {
 	for intfc := range in {
 		res := f(intfc, params...)

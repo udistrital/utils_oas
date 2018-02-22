@@ -90,15 +90,3 @@ func FillStructDeep(m map[string]interface{}, fields string, s interface{}) (err
 	err = json.Unmarshal(j, s)
 	return
 }
-
-//funcion para generar canales de interface{}
-func GenChanInterface(mp ...interface{}) <-chan interface{} {
-	out := make(chan interface{})
-	go func() {
-		for _, ch := range mp {
-			out <- ch
-		}
-		close(out)
-	}()
-	return out
-}
