@@ -14,12 +14,14 @@ func SecurityHivridApp(user, token, hash string) (answer bool, err error) {
 	var hashGenerated string
 	// Paso 1 generar Hash
 	if hashGenerated, err = GeneratedHash(user, token); err == nil {
-		//println(hashGenerated, hash)
 		// Paso 2 Validar que el hash sea el esperado
 		if hashGenerated == hash {
-			// Consultar sesion # falta
-			println("IGUAl")
-			answer = true
+			// paso 3 Consultar sesion
+			if sesion := GetSesionAcademica(token); sesion == true {
+				answer = true
+			} else {
+				err = errors.New("there is no session")
+			}
 		} else {
 			err = errors.New("the hash does not match")
 		}
@@ -38,7 +40,6 @@ func GeneratedHash(user, token string) (outputHash string, err error) {
 		h := sha1.New()
 		h.Write([]byte(allString))
 		outputHash = hex.EncodeToString(h.Sum(nil))
-		println(allString, outputHash)
 	} else {
 		err = errors.New("secret not defined")
 	}
@@ -46,9 +47,11 @@ func GeneratedHash(user, token string) (outputHash string, err error) {
 }
 
 func GetSesionAcademica(token string) (sesion bool) {
-	var dataSeion []interface{}
-	if err := request.GetJson("http://jbpm.udistritaloas.edu.co:8280/services/uranoPruebasProxy/get_usuario_session/"+token, &dataSeion); err == nil && dataSeion != nil {
-		beego.Info(dataSeion)
+	var dataSeion interface{}
+	if err := request.GetJsonWSO2("http://jbpm.udistritaloas.edu.co:8280/services/uranoPruebasProxy/get_usuario_session/"+token, &dataSeion); err == nil && dataSeion != nil {
+		if _, e := dataSeion.(map[string]interface{})["usuarios"].(map[string]interface{})["usuario"]; e == true {
+			sesion = true
+		}
 	}
-
+	return
 }
