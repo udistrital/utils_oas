@@ -9,7 +9,7 @@ import (
 	"github.com/astaxie/beego"
 )
 
-func sendJson(urlp string, trequest string, target interface{}, datajson interface{}) error {
+func SendJson(urlp string, trequest string, target interface{}, datajson interface{}) error {
 	b := new(bytes.Buffer)
 	if datajson != nil {
 		json.NewEncoder(b).Encode(datajson)
@@ -29,7 +29,7 @@ func sendJson(urlp string, trequest string, target interface{}, datajson interfa
 	return json.NewDecoder(r.Body).Decode(target)
 }
 
-func getJsonWSO2(urlp string, target interface{}) error {
+func GetJsonWSO2(urlp string, target interface{}) error {
 	b := new(bytes.Buffer)
 	//proxyUrl, err := url.Parse("http://10.20.4.15:3128")
 	//http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
@@ -47,7 +47,7 @@ func getJsonWSO2(urlp string, target interface{}) error {
 	return json.NewDecoder(r.Body).Decode(target)
 }
 
-func getJson(urlp string, target interface{}) error {
+func GetJson(urlp string, target interface{}) error {
 	//proxyUrl, err := url.Parse("http://10.20.4.15:3128")
 	//http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
 	r, err := http.Get(urlp)
