@@ -1,6 +1,7 @@
 package optimize
 
 import (
+	"runtime"
 	"sync"
 )
 
@@ -16,7 +17,6 @@ func GenChanInterface(mp ...interface{}) <-chan interface{} {
 	return out
 }
 
-
 func digester(done <-chan interface{}, f func(interface{}, ...interface{}) interface{}, params []interface{}, in <-chan interface{}, out chan<- interface{}) {
 	for intfc := range in {
 		res := f(intfc, params...)
@@ -29,13 +29,24 @@ func digester(done <-chan interface{}, f func(interface{}, ...interface{}) inter
 }
 
 //funcion para administrar las go rutines armadas para la consulta de solicitudes de rp.
-func Digest(done <-chan interface{}, f func(interface{}, ...interface{}) interface{}, in <-chan interface{}, params []interface{}) (outchan <-chan interface{}) {
+func Digest(done <-chan interface{}, f func(interface{}, ...interface{}) interface{}, in <-chan interface{}, params []interface{}, maxConcurrency ...int) (outchan <-chan interface{}) {
 	out := make(chan interface{})
 	var wg sync.WaitGroup
-	const numDigesters = 1
+	numDigesters := runtime.NumCPU()
+	if len(maxConcurrency) > 0 {
+		numDigesters = maxConcurrency[0]
+
+	}
 	wg.Add(numDigesters)
 	for i := 0; i < numDigesters; i++ {
 		go func() {
+			defer func() {
+				// recover from panic if one occured. Set err to nil otherwise.
+				if recover() != nil {
+					wg.Done()
+
+				}
+			}()
 			digester(done, f, params, in, out)
 			wg.Done()
 		}()
