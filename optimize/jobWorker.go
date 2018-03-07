@@ -1,10 +1,10 @@
 package optimize
 
-var WorkQueue = make(chan WorkRequest, 100)
+var WorkQueue = make(chan WorkRequest)
 var WorkerQueue chan chan WorkRequest
 
 type WorkRequest struct {
-	JobParameter interface{}
+	JobParameter []interface{}
 	Job          func(...interface{}) interface{}
 }
 
@@ -36,10 +36,9 @@ func (w *Worker) Start() {
 
 			select {
 			case work := <-w.Work:
-				work.Job(work.JobParameter)
+				work.Job(work.JobParameter...)
 			case <-w.QuitChan:
 				// We have been asked to stop.
-
 				return
 			}
 		}
@@ -57,10 +56,13 @@ func (w *Worker) Stop() {
 
 func StartDispatcher(nworkers int, limitW int) {
 	// First, initialize the channel we are going to but the workers' work channels into.
+	// WorkerQueue = make(chan chan WorkRequest, nworkers)
 	WorkerQueue = make(chan chan WorkRequest, nworkers)
 	if limitW > 0 {
 		WorkQueue = make(chan WorkRequest, limitW)
+
 	}
+
 	// Now, create all of our workers.
 	for i := 0; i < nworkers; i++ {
 		worker := NewWorker(i+1, WorkerQueue)
@@ -68,15 +70,18 @@ func StartDispatcher(nworkers int, limitW int) {
 	}
 
 	go func() {
+		// fmt.Println(WorkerQueue)
 		for {
 			select {
 			case work := <-WorkQueue:
 
 				go func() {
+
 					worker := <-WorkerQueue
 
 					worker <- work
 				}()
+
 			}
 		}
 	}()
