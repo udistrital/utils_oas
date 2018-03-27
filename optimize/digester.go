@@ -57,3 +57,17 @@ func Digest(done <-chan interface{}, f func(interface{}, ...interface{}) interfa
 	}()
 	return out
 }
+
+func ProccDigest(data []interface{}, f func(interface{}, ...interface{}) interface{}, params []interface{}, maxConcurrency ...int) (res []interface{}) {
+	done := make(chan interface{})
+	defer close(done)
+	resch := GenChanInterface(data...)
+	chres := Digest(done, f, resch, params, maxConcurrency...)
+	for resdata := range chres {
+		if resdata != nil {
+			res = append(res, resdata)
+		}
+
+	}
+	return
+}
