@@ -1,5 +1,5 @@
 package optimize
-
+import("fmt")
 var WorkQueue = make(chan WorkRequest)
 var WorkerQueue chan chan WorkRequest
 
@@ -30,6 +30,14 @@ type Worker struct {
 // an infinite "for-select" loop.
 func (w *Worker) Start() {
 	go func() {
+		defer func() {
+			// recover from panic if one occured. Set err to nil otherwise.
+			if recover() != nil {
+				fmt.Println("Stoped Work... ")
+				return
+
+			}
+		}()
 		for {
 			// Add ourselves into the worker queue.
 			w.WorkerQueue <- w.Work
