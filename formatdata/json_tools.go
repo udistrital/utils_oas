@@ -14,6 +14,14 @@ func FillStruct(m interface{}, s interface{}) (err error) {
 	return
 }
 
+func FillStructP(m interface{}, s interface{}) {
+	j, _ := json.Marshal(m)
+	err := json.Unmarshal(j, s)
+	if err != nil {
+		panic(err.Error())
+	}
+}
+
 func SetField(obj interface{}, name string, value interface{}) error {
 
 	structValue := reflect.ValueOf(obj).Elem()
