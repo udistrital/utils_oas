@@ -98,3 +98,13 @@ func FillStructDeep(m map[string]interface{}, fields string, s interface{}) (err
 	err = json.Unmarshal(j, s)
 	return
 }
+
+func JsonPrint(x interface{}) (err error) {
+	b, err := json.MarshalIndent(x, "", "  ")
+	if err != nil {
+		fmt.Println("error:", err)
+		return
+	}
+	fmt.Print(string(b))
+	return
+}
