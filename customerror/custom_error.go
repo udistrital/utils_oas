@@ -10,13 +10,14 @@ type CustomErrorController struct {
 }
 
 func (c *CustomErrorController) Error400() {
-	outputError := map[string]string{"Code": "400", "Body": "The request contains incorrect syntax", "Type": "error"}
+	outputError := map[string]interface{}{"status": "400", "message": "The request contains incorrect syntax", "type": "error", "development": c.Data["development"]}
 	c.Data["json"] = outputError
 	c.ServeJSON()
 }
 
 func (c *CustomErrorController) Error404() {
-	outputError := map[string]string{"Code": "404", "Body": "Not found resource", "Type": "error"}
+	outputError := map[string]interface{}{"status": "400", "message": "Not found resource", "type": "error", "development": c.Data["development"]}
+
 	c.Data["json"] = outputError
 	c.ServeJSON()
 }
