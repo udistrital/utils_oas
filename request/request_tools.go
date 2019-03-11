@@ -59,6 +59,16 @@ func GetJson(urlp string, target interface{}) error {
 	return json.NewDecoder(r.Body).Decode(target)
 }
 
+func GetJsonTest(url string, target interface{}) (response *http.Response, err error) {
+	var myClient = &http.Client{Timeout: 10 * time.Second}
+	response, err = myClient.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	return response, json.NewDecoder(response.Body).Decode(target)
+}
+
 func diff(a, b time.Time) (year, month, day int) {
 	if a.Location() != b.Location() {
 		b = b.In(a.Location())
