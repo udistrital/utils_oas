@@ -10,18 +10,19 @@ Esta es un paquete de librerías y utilidades generales para las aplicaciones de
 Funcionalidades para establecer el [código de estado HTTP](https://es.wikipedia.org/wiki/Anexo:C%C3%B3digos_de_estado_HTTP) de cada una de las respuestas del API  y establecer la estructura de respuesta en formato JSON.
 
 #### formatdata
+Funcionalidades para la conversión y trabajo de estructuras JSON
 
 #### optimize
+Funcionalidades de optimización con procesamiento de datos en golang
 
 #### request
 Funcionalidades para el consumo de servicios JSON desde una API
 
 #### ruler
+Funcionalidades para las reglas de negocio
 
 #### security
 Funcionalidades de seguridad para aplicaciones legadas, híbridas y nuevas en go
-
-
 
 
 ## Licencia
