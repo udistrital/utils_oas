@@ -12,19 +12,19 @@ Esta es un paquete de librerías y utilidades generales para las aplicaciones de
 
 - **formatdata**
 
- Funcionalidades para la conversión y trabajo de estructuras JSON
+  Funcionalidades para la conversión y trabajo de estructuras JSON
 
-#### optimize
-Funcionalidades de optimización con procesamiento de datos en golang
+- **optimize**
+  Funcionalidades de optimización con procesamiento de datos en golang
 
-#### request
-Funcionalidades para el consumo de servicios JSON desde una API
+- **request**
+  Funcionalidades para el consumo de servicios JSON desde una API
 
-#### ruler
-Funcionalidades para las reglas de negocio
+- **ruler**
+  Funcionalidades para las reglas de negocio
 
-#### security
-Funcionalidades de seguridad para aplicaciones legadas, híbridas y nuevas en go
+- **security**
+  Funcionalidades de seguridad para aplicaciones legadas, híbridas y nuevas en go
 
 
 ## Licencia
