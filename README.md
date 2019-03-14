@@ -4,13 +4,15 @@ Esta es un paquete de librerías y utilidades generales para las aplicaciones de
 
 
 
-#### apiStatusLib
+- **apiStatusLib**
 
-#### customerror
-Funcionalidades para establecer el [código de estado HTTP](https://es.wikipedia.org/wiki/Anexo:C%C3%B3digos_de_estado_HTTP) de cada una de las respuestas del API  y establecer la estructura de respuesta en formato JSON.
+- **customerror**
 
-#### formatdata
-Funcionalidades para la conversión y trabajo de estructuras JSON
+ Funcionalidades para establecer el [código de estado HTTP](https://es.wikipedia.org/wiki/Anexo:C%C3%B3digos_de_estado_HTTP) de cada una de las respuestas del API  y establecer la estructura de respuesta en formato JSON.
+
+- **formatdata**
+
+ Funcionalidades para la conversión y trabajo de estructuras JSON
 
 #### optimize
 Funcionalidades de optimización con procesamiento de datos en golang
