@@ -1,8 +1,6 @@
 # utils_oas
 
-Esta es un paquete de librerías y utilidades generales para las aplicaciones desarrolladas en el framework beego que hacen parte de la arquitectura API RES de la OAS:
-
-
+Este es un paquete de librerías y utilidades generales para las aplicaciones desarrolladas en el framework beego que hacen parte de la arquitectura API RES de la OAS:
 
 - **apiStatusLib**
 
