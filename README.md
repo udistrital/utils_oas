@@ -15,15 +15,19 @@ Esta es un paquete de librerías y utilidades generales para las aplicaciones de
   Funcionalidades para la conversión y trabajo de estructuras JSON
 
 - **optimize**
+
   Funcionalidades de optimización con procesamiento de datos en golang
 
 - **request**
+
   Funcionalidades para el consumo de servicios JSON desde una API
 
 - **ruler**
+
   Funcionalidades para las reglas de negocio
 
 - **security**
+
   Funcionalidades de seguridad para aplicaciones legadas, híbridas y nuevas en go
 
 
