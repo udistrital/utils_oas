@@ -4,9 +4,9 @@ Esta es un paquete de librerías y utilidades generales para las aplicaciones de
 
 
 
-- apiStatusLib
+#### apiStatusLib
 
-- customerror
+#### customerror
 
     Funcionalidades para establecer el [código de estado HTTP](https://es.wikipedia.org/wiki/Anexo:C%C3%B3digos_de_estado_HTTP) de cada una de las respuestas del API  y establecer la estructura de respuesta en formato JSON.
 
