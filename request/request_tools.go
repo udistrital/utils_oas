@@ -21,7 +21,8 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 	r, err := client.Do(req)
 	//r, err := http.Post(url, "application/json; charset=utf-8", b)
 	if err != nil {
-		beego.Error("error", err)
+		fmt.Prinltn("error", err)
+		//beego.Error("error", err)// se elimina por error en librería de beego
 		return err
 	}
 	defer r.Body.Close()
@@ -39,7 +40,8 @@ func GetJsonWSO2(urlp string, target interface{}) error {
 	r, err := client.Do(req)
 	//r, err := http.Post(url, "application/json; charset=utf-8", b)
 	if err != nil {
-		beego.Error("error", err)
+		fmt.Prinltn("error", err)
+		//beego.Error("error", err)
 		return err
 	}
 	defer r.Body.Close()
