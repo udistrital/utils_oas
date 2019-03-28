@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/astaxie/beego"
+	
 )
 
 func SendJson(urlp string, trequest string, target interface{}, datajson interface{}) error {
@@ -21,7 +21,7 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 	r, err := client.Do(req)
 	//r, err := http.Post(url, "application/json; charset=utf-8", b)
 	if err != nil {
-		fmt.Prinltn("error", err)
+		fmt.Println("error", err)
 		//beego.Error("error", err)// se elimina por error en librería de beego
 		return err
 	}
@@ -40,7 +40,7 @@ func GetJsonWSO2(urlp string, target interface{}) error {
 	r, err := client.Do(req)
 	//r, err := http.Post(url, "application/json; charset=utf-8", b)
 	if err != nil {
-		fmt.Prinltn("error", err)
+		fmt.Println("error", err)
 		//beego.Error("error", err)
 		return err
 	}
