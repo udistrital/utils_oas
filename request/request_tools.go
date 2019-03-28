@@ -21,7 +21,8 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 	r, err := client.Do(req)
 	//r, err := http.Post(url, "application/json; charset=utf-8", b)
 	if err != nil {
-		beego.Error("error", err)
+		fmt.Prinltn("error", err)
+		//beego.Error("error", err)// se elimina por error en librería de beego
 		return err
 	}
 	defer r.Body.Close()
@@ -39,7 +40,8 @@ func GetJsonWSO2(urlp string, target interface{}) error {
 	r, err := client.Do(req)
 	//r, err := http.Post(url, "application/json; charset=utf-8", b)
 	if err != nil {
-		beego.Error("error", err)
+		fmt.Prinltn("error", err)
+		//beego.Error("error", err)
 		return err
 	}
 	defer r.Body.Close()
@@ -57,6 +59,16 @@ func GetJson(urlp string, target interface{}) error {
 	defer r.Body.Close()
 
 	return json.NewDecoder(r.Body).Decode(target)
+}
+
+func GetJsonTest(url string, target interface{}) (response *http.Response, err error) {
+	var myClient = &http.Client{Timeout: 10 * time.Second}
+	response, err = myClient.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	return response, json.NewDecoder(response.Body).Decode(target)
 }
 
 func diff(a, b time.Time) (year, month, day int) {
