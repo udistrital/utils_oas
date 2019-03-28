@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/astaxie/beego"
+	
 )
 
 func SendJson(urlp string, trequest string, target interface{}, datajson interface{}) error {
