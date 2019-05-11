@@ -10,8 +10,8 @@ type response struct {
 	Body interface{}
 }
 
-// ResponseFormat ... set the status format for service's response.
-func ResponseFormat(c *beego.Controller, data interface{}, code string, status int) {
+// SetResponseFormat ... set the status format for service's response.
+func SetResponseFormat(c *beego.Controller, data interface{}, code string, status int) {
 	res := response{}
 	c.Ctx.Output.SetStatus(status)
 	if status >= 100 && status < 200 {
