@@ -5,9 +5,9 @@ import (
 )
 
 type response struct {
-	Code   string
-	Status string
-	Body   interface{}
+	Code string
+	Type string
+	Body interface{}
 }
 
 // SetResponseFormat ... set the status format for service's response.
@@ -15,15 +15,15 @@ func SetResponseFormat(c *beego.Controller, data interface{}, code string, statu
 	res := response{}
 	c.Ctx.Output.SetStatus(status)
 	if status >= 100 && status < 200 {
-		res.Status = "information"
+		res.Type = "information"
 	} else if status == 200 && status < 300 {
-		res.Status = "success"
+		res.Type = "success"
 	} else if status == 300 && status < 400 {
-		res.Status = "redirection"
+		res.Type = "redirection"
 	} else if status == 404 {
-		res.Status = "not found"
+		res.Type = "not found"
 	} else {
-		res.Status = "error"
+		res.Type = "error"
 	}
 
 	res.Code = code
