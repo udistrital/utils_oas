@@ -23,7 +23,7 @@ func SetResponseFormat(c *beego.Controller, data interface{}, code string, statu
 	} else if status == 404 {
 		res.Type = "not found"
 	} else {
-		res.Type = "internal error"
+		res.Type = "error"
 	}
 
 	res.Code = code
