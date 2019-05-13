@@ -35,7 +35,7 @@ func SetResponseFormat(c *beego.Controller, data interface{}, code string, statu
 	c.ServeJSON()
 }
 
-func GetResponseFormat(ctx *context.Context, data interface{}, status int) {
+func ModifyBeegoDefaultResponseFormat(ctx *context.Context, data interface{}, status int) {
 	res := response{}
 	ctx.Output.SetStatus(status)
 	if status >= 100 && status < 200 {
@@ -52,5 +52,5 @@ func GetResponseFormat(ctx *context.Context, data interface{}, status int) {
 
 	res.Body = data
 
-	ctx.Input.SetData("json", res)
+	ctx.Output.JSON(res, false, false)
 }
