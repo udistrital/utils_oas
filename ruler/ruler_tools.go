@@ -24,10 +24,12 @@ type EntornoReglas struct {
 
 func (e *EntornoReglas) Agregar_dominio(dominio string) {
 	var v []Predicado
-	if err := request.GetJson("http://"+beego.AppConfig.String("Urlruler")+":"+beego.AppConfig.String("Portruler")+"/"+beego.AppConfig.String("Nsruler")+"/predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
+	if err := request.GetJson(beego.AppConfig.String("rulerService")+"predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
 		for i := 0; i < len(v); i++ {
 			e.base = e.base + v[i].Nombre + "\n"
 		}
+	} else {
+		beego.Error(err.Error())
 	}
 }
 
@@ -161,7 +163,7 @@ func CargarReglasBase(dominio string) (reglas string) {
 	var v []Predicado
 
 	fmt.Println(dominio)
-	if err := request.GetJson("http://"+beego.AppConfig.String("Urlruler")+":"+beego.AppConfig.String("Portruler")+"/"+beego.AppConfig.String("Nsruler")+"/predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
+	if err := request.GetJson(beego.AppConfig.String("Urlruler")+"predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
 
 		reglasbase = reglasbase + FormatoReglas(v) //funcion general para dar formato a reglas cargadas desde el ruler
 	} else {
