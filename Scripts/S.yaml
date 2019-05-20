@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: '2019-05-20'
+Resources:
+  LogsWSO2Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketName: logs-wso2
+  LogsAPIsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+      BucketName: logs-apis
+     
