@@ -1,0 +1,16 @@
+CREATE DATABASE IF NOT EXISTS logswso2
+  COMMENT 'DB logs wso2'
+  LOCATION 's3://myS3location/nombre'
+  WITH DBPROPERTIES ('creator'='Auditoria', 'Dept.'='CORE');
+
+CREATE EXTERNAL TABLE IF NOT EXISTS logswso2.registro_logs (
+  tid STRING,
+  date STRING,
+  level STRING,
+  package STRING,
+  details STRING, 
+  ) 
+  ROW FORMAT SERDE DELIMITED
+  LOCATION 's3://athena-examples/cloudfront/plaintext/';
+
+  
