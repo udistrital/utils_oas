@@ -1,6 +1,10 @@
+--Script Creacion DB Athena
+
 CREATE DATABASE IF NOT EXISTS logswso2
   COMMENT 'DB logs wso2'
   WITH DBPROPERTIES ('creator'='Auditoria', 'Dept.'='CORE');
+
+--Script Creacion Tabla de formato de archivos Json almacenados en S3
 
 CREATE EXTERNAL TABLE IF NOT EXISTS logswso2.registro_logs (
   `tid` string,
@@ -15,4 +19,16 @@ WITH SERDEPROPERTIES (
 ) LOCATION 's3://logs-wso2-oas/'
 TBLPROPERTIES ('has_encrypted_data'='false');
 
-  
+--Descripcion de campos 
+
+-- ddl-end --
+COMMENT ON COLUMN logswso2.registro_logs.tid IS 'Identificador pendiente de definicion';
+-- ddl-end --
+COMMENT ON COLUMN logswso2.registro_logs.date IS 'Fecha en que se genero el registro de auditoria';
+-- ddl-end --
+COMMENT ON COLUMN logswso2.registro_logs.level IS 'Identificador del tipo de registro generado, posibles valores ERROR, INFO';
+-- ddl-end --
+COMMENT ON COLUMN logswso2.registro_logs.package IS 'Los tipos de valores que agrupa este campo y su utilidad actualmente son desconocidos';
+-- ddl-end --
+COMMENT ON COLUMN logswso2.registro_logs.details IS 'Registro de la accion que se pretende ejecutar ya sea una descripcion del error o el payload generado desde los API''s';
+-- ddl-end --
