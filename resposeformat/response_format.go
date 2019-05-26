@@ -54,3 +54,13 @@ func ModifyBeegoDefaultResponseFormat(ctx *context.Context, data interface{}, st
 
 	ctx.Output.JSON(res, false, false)
 }
+
+// GlobalErrorHandler ... Global defer for any go panic at the API.
+func GlobalErrorHandler(ctx *context.Context) {
+	if r := recover(); r != nil {
+		beego.Error(r)
+		ctx.ResponseWriter.WriteHeader(500)
+		out := map[string]interface{}{"error": r}
+		ctx.Output.JSON(out, true, false)
+	}
+}
