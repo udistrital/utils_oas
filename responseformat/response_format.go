@@ -1,4 +1,4 @@
-package resposeformat
+package responseformat
 
 import (
 	"github.com/astaxie/beego/context"
