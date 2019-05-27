@@ -61,35 +61,46 @@ func ModifyBeegoDefaultResponseFormat(ctx *context.Context, data interface{}, st
 func GlobalResponseHandler(ctx *context.Context) {
 	out := response{}
 	Body := ctx.Input.Data()["json"]
+
 	defer func() {
 		ctx.Output.JSON(out, true, false)
 
 	}()
+
 	if r := recover(); r != nil {
 		beego.Error(r)
 		ctx.ResponseWriter.WriteHeader(500)
 		out.Body = r
 		out.Code = ""
 		out.Type = "error"
-	}
-	if reflect.ValueOf(Body).IsValid() {
-		defer func() {
-			if r := recover(); r != nil {
-				beego.Error(r)
+	} else {
+		if reflect.ValueOf(Body).IsValid() {
+
+			defer func() {
+				if r := recover(); r != nil {
+					beego.Error(r)
+					out.Body = Body
+					out.Type = "success"
+					ctx.ResponseWriter.WriteHeader(200)
+				}
+			}()
+
+			if reflect.ValueOf(Body).IsNil() {
+				out.Body = nil
+				out.Type = "No Data Found"
+				ctx.ResponseWriter.WriteHeader(201)
+			} else {
 				out.Body = Body
 				out.Type = "success"
 				ctx.ResponseWriter.WriteHeader(200)
 			}
-		}()
-		if reflect.ValueOf(Body).IsNil() {
-			out.Body = nil
-			out.Type = "No Data Found"
-			ctx.ResponseWriter.WriteHeader(201)
-		}
 
-	} else {
-		out.Body = Body
-		out.Type = "success"
-		ctx.ResponseWriter.WriteHeader(200)
+		} else {
+			beego.Error("Unknow error")
+			ctx.ResponseWriter.WriteHeader(500)
+			out.Body = "Unknow error"
+			out.Code = ""
+			out.Type = "error"
+		}
 	}
 }
