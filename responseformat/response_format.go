@@ -1,6 +1,8 @@
 package responseformat
 
 import (
+	"reflect"
+
 	"github.com/astaxie/beego/context"
 
 	"github.com/astaxie/beego"
@@ -57,10 +59,24 @@ func ModifyBeegoDefaultResponseFormat(ctx *context.Context, data interface{}, st
 
 // GlobalErrorHandler ... Global defer for any go panic at the API.
 func GlobalErrorHandler(ctx *context.Context) {
+	type response struct {
+		Code string
+		Type string
+		Body interface{}
+	}
 	if r := recover(); r != nil {
 		beego.Error(r)
 		ctx.ResponseWriter.WriteHeader(500)
 		out := map[string]interface{}{"error": r}
+		ctx.Output.JSON(out, true, false)
+	}
+	Body := ctx.Input.Data()["json"]
+	out := response{}
+	if reflect.ValueOf(Body).IsNil() {
+		beego.Debug("dgdgd")
+		out.Body = nil
+		out.Type = "No Data Found"
+		ctx.ResponseWriter.WriteHeader(201)
 		ctx.Output.JSON(out, true, false)
 	}
 }
