@@ -57,8 +57,8 @@ func ModifyBeegoDefaultResponseFormat(ctx *context.Context, data interface{}, st
 	ctx.Output.JSON(res, false, false)
 }
 
-// GlobalErrorHandler ... Global defer for any go panic at the API.
-func GlobalErrorHandler(ctx *context.Context) {
+// GlobalResponseHandler ... Global defer for any go panic at the API.
+func GlobalResponseHandler(ctx *context.Context) {
 	type response struct {
 		Code string
 		Type string
@@ -73,10 +73,14 @@ func GlobalErrorHandler(ctx *context.Context) {
 	Body := ctx.Input.Data()["json"]
 	out := response{}
 	if reflect.ValueOf(Body).IsNil() {
-		beego.Debug("dgdgd")
 		out.Body = nil
 		out.Type = "No Data Found"
 		ctx.ResponseWriter.WriteHeader(201)
+		ctx.Output.JSON(out, true, false)
+	} else {
+		out.Body = Body
+		out.Type = "success"
+		ctx.ResponseWriter.WriteHeader(200)
 		ctx.Output.JSON(out, true, false)
 	}
 }
