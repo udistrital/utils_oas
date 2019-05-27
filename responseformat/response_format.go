@@ -59,28 +59,37 @@ func ModifyBeegoDefaultResponseFormat(ctx *context.Context, data interface{}, st
 
 // GlobalResponseHandler ... Global defer for any go panic at the API.
 func GlobalResponseHandler(ctx *context.Context) {
-	type response struct {
-		Code string
-		Type string
-		Body interface{}
-	}
+	out := response{}
+	Body := ctx.Input.Data()["json"]
+	defer func() {
+		ctx.Output.JSON(out, true, false)
+
+	}()
 	if r := recover(); r != nil {
 		beego.Error(r)
 		ctx.ResponseWriter.WriteHeader(500)
-		out := map[string]interface{}{"error": r}
-		ctx.Output.JSON(out, true, false)
+		out.Body = r
+		out.Code = ""
+		out.Type = "error"
 	}
-	Body := ctx.Input.Data()["json"]
-	out := response{}
-	if reflect.ValueOf(Body).IsNil() {
-		out.Body = nil
-		out.Type = "No Data Found"
-		ctx.ResponseWriter.WriteHeader(201)
-		ctx.Output.JSON(out, true, false)
+	if reflect.ValueOf(Body).IsValid() {
+		defer func() {
+			if r := recover(); r != nil {
+				beego.Error(r)
+				out.Body = Body
+				out.Type = "success"
+				ctx.ResponseWriter.WriteHeader(200)
+			}
+		}()
+		if reflect.ValueOf(Body).IsNil() {
+			out.Body = nil
+			out.Type = "No Data Found"
+			ctx.ResponseWriter.WriteHeader(201)
+		}
+
 	} else {
 		out.Body = Body
 		out.Type = "success"
 		ctx.ResponseWriter.WriteHeader(200)
-		ctx.Output.JSON(out, true, false)
 	}
 }
