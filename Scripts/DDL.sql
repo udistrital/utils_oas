@@ -38,5 +38,7 @@ COMMENT ON COLUMN logswso2.registro_logs_v2.level IS 'Identificador del tipo de 
 -- ddl-end --
 COMMENT ON COLUMN logswso2.registro_logs_v2.package IS 'Los tipos de valores que agrupa este campo y su utilidad actualmente son desconocidos';
 -- ddl-end --
+COMMENT ON COLUMN logswso2.registro_logs_v2.details IS 'Parte de la columna Details que se genera en algunos casos de error, en la mayoria de casos estara vacio este campo';
+-- ddl-end --
 COMMENT ON COLUMN logswso2.registro_logs_v2.details IS 'Registro de la accion que se pretende ejecutar ya sea una descripcion del error o el payload generado desde los API''s';
 -- ddl-end --
