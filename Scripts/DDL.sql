@@ -6,19 +6,20 @@ CREATE DATABASE IF NOT EXISTS logswso2
 
 --Script Creacion Tabla de formato de archivos Json almacenados en S3
 
-CREATE EXTERNAL TABLE IF NOT EXISTS logswso2.logs_wso2 (
+CREATE EXTERNAL TABLE IF NOT EXISTS logs.logs_wso2_final (
   `tid` string,
   `ip` string,
   `host` string,
   `date` string,
   `level` string,
   `package` string,
+  `details_opc` string,
   `details` string 
 )
 ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.RegexSerDe'
 WITH SERDEPROPERTIES (
   'serialization.format' = '1',
-  'input.regex' = '([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)'
+  'input.regex' = '([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)'
 ) LOCATION 's3://logs-wso2-oas/cleaned_logs/'
 TBLPROPERTIES ('has_encrypted_data'='false');
 
