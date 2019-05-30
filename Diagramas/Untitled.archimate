@@ -9,6 +9,9 @@
     <element xsi:type="archimate:ApplicationService" name="Servicio de consulta de Logs" id="f481099a-1d48-4a83-92e5-42d77f78502d"/>
     <element xsi:type="archimate:ApplicationProcess" name="Peticiones de APIs MID" id="1ad3f72d-e8e4-4a42-b3fc-d470186af4d5"/>
     <element xsi:type="archimate:ApplicationProcess" name="Peticiones de APIs CRUD" id="f4e4d5f4-3370-43a5-a818-055507ed33d0"/>
+    <element xsi:type="archimate:ApplicationComponent" name="WSO2" id="194019c0-3692-49d4-a551-e78e3a218aaf"/>
+    <element xsi:type="archimate:ApplicationService" name="Application Service" id="c5754b36-615c-48b7-a51d-9ae3d635d08f"/>
+    <element xsi:type="archimate:ApplicationFunction" name="Registrar Logs" id="c6d12256-ef72-40df-9367-1153fff4fa91"/>
   </folder>
   <folder name="Technology &amp; Physical" id="d4b59ac2-61dd-43a9-9bd0-69715cd1e01d" type="technology">
     <element xsi:type="archimate:Artifact" name="Logs" id="d87b2ef9-208f-4c9e-8e34-d7c3cf672dfd"/>
