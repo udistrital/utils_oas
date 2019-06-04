@@ -3,75 +3,67 @@ package auditoria
 import (
 	"fmt"
 	"time"
-
+	
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
-	amqp "github.com/streadway/amqp"
+	//amqp "github.com/streadway/amqp"
 )
 
-//Variables para la conexión y el canal
-var connection *amqp.Connection
-var chl *amqp.Channel
 
-func failOnError(err error, msg string) {
-	if err != nil {
-		beego.Info("%s: %s", msg, err)
-		beego.Info(fmt.Sprintf("%s: %s", msg, err))
-	}
-}
+func ListenRequest(ctx *context.Context) {
 
-func FunctionBeforeStatic(ctx *context.Context) {
-	beego.Info("beego.BeforeStatic: Before finding the static file")
-}
-func FunctionBeforeRouter(ctx *context.Context) {
-	beego.Info("beego.BeforeRouter: Executing Before finding router")
-}
-func FunctionBeforeExec(ctx *context.Context) {
+	/*---- Declaración de variables ---- */
 
-	beego.Info("beego.BeforeExec: After finding router and before executing the matched Controller")
-}
+		/*---- Información relacionada a la aplicación y la petición ---- */
+		var app_name 	string  	//Nombre del API al que se le hace la petición
+		var host 		string     	//Host del API
+		var end_point 	string		//End point al que se le realiza la petición
+		var method 		string      //Método REST de la petición
+		var date		string 		//Fecha y hora de la operación
 
-func FunctionAfterExec(ctx *context.Context) {
-	//Variable que contiene la hora de la operación
-	now := time.Now().String()
-	//Variable que contiene la IP del usuario
-	ip_user := ctx.Input.IP()
-	//Variable que contiene el servicio al que se le hace la petición
-	url := ctx.Request.URL.String()
-	//Variable que contiene el método de la petición
-	metodo := ctx.Request.Method
-	//Host del API
-	host := ctx.Request.Host
-	//Variable que contiene el cuerpo del JSON que el usuario envia
-	data_user := string(ctx.Input.RequestBody)
-	//Variable que contiene el response body del servicio
-	data_response := ctx.Input.Data()
-	//Variable que contiene el nombre del API al que se le hace la petición
-	app := beego.AppConfig.Strings("appname")
+		/*---- Información relacionada con el usuario ---- */
+		var ip_user      string      //IP del usuario   <----- pendiente
+		var access_token string 	 //Access token asignado al usuario que realiza peticion  	
+		var user_agent   string      //Tipo de aplicación, sistema operativo, provedor del software o laversión del software de la petición del agente de usuario
+		var user 		 string 	 //Nombre de usuario en WSO2 que realiza la petición    <----- pendiente
+		
+		/*---- Información relacionada con el cuerpo de la petición ---- */
+		var data_response  string  //Payload del servicio
 
-	/*fmt.Println("Nombre API: " + app[0])              //Nombre del API al que se le hace la petición
-	fmt.Println("La fecha de la petición es: " + now) //Fecha de transacción
-	fmt.Println("Este es el query ", ctx.Request.URL.Query().Get("auth"))---> Usuario quien hace la petición WSO2
-	fmt.Println("Este es la IP del usuario que hace la petición: " + ctx.Input.IP())
-	fmt.Println("Este es la URL del servicio a la que se le hace la petición: " + ctx.Request.URL.String()) //URL de la petición
-	fmt.Println("Este es el método de la petición: " + ctx.Request.Method)                                  //Método de la petición
-	fmt.Println("Este es el host del api: " + ctx.Request.Host)                                             //Host desde el que se hace la petición
-	fmt.Println("Data enviada por el usuario:" + data_user)                                                 //Data enviada por el usuario
-	fmt.Println(data_response["json"])                                                                      //En las peticiones get y post se ve la data, devuelve OK cuando se hace un post o un delete
-	*/
+		/*---- Asignación de variables ----*/
+		app_name = beego.AppConfig.String("appname")
+		host = ctx.Request.Host
+		end_point = ctx.Request.URL.String()
+		method = ctx.Request.Method
+		date = time.Now().String()
+		ip_user = "MyIP"
+		user_agent = ctx.Request.Header["User-Agent"][0]
+		user = "MyUser"
+		//data_response = ctx.Input.Data()	
+		data_response = "ejemplo"
 
-	var mensaje = fmt.Sprintf(`{"FechaOperacion": %s, "User": "userWSO2", "IpUser": %s, "UrlService": %s, "Método": %s, "HostApi": %s ,"DataUser":%s, "DataResponse":%s, "ApiName":%s}`, now, ip_user, url, metodo, host, data_user, data_response["json"], app[0])
+		// *--------- Se implementa try y catch para cuando la petición NO viene de WSO2 y no se tiene access_token
+		
+		// TRY
+		defer func () {
+			if r := recover(); r != nil {
+				//este es el catch
+				access_token = "NO WSO2"
+				var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
+				beego.Info(log)
 
-	sentToRabbit(mensaje)
-
-	beego.Info("Petición auditada")
+			}
+		}()
+		
+		// CATCH
+		access_token = ctx.Request.Header["Authorization"][0]
+		var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
+		beego.Info(log)
+	
 
 }
 
-func FunctionFinishRouter(ctx *context.Context) {
-	beego.Info("beego.FinishRouter: After finishing router")
-}
 
 func InitMiddleware() {
-	beego.InsertFilter("*", beego.AfterExec, FunctionAfterExec, false)
+	beego.InsertFilter("*", beego.AfterExec, ListenRequest, false)
 }
