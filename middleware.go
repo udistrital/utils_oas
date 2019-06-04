@@ -3,13 +3,13 @@ package auditoria
 import (
 	"fmt"
 	"time"
-
+	
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
-	amqp "github.com/streadway/amqp"
+	//amqp "github.com/streadway/amqp"
 )
 
-//Variables para la conexión y el canal
+/*Variables para la conexión y el canal
 var connection *amqp.Connection
 var chl *amqp.Channel
 
@@ -19,6 +19,7 @@ func failOnError(err error, msg string) {
 		beego.Info(fmt.Sprintf("%s: %s", msg, err))
 	}
 }
+*/
 
 func FunctionBeforeStatic(ctx *context.Context) {
 	beego.Info("beego.BeforeStatic: Before finding the static file")
@@ -32,39 +33,45 @@ func FunctionBeforeExec(ctx *context.Context) {
 }
 
 func FunctionAfterExec(ctx *context.Context) {
-	//Variable que contiene la hora de la operación
-	now := time.Now().String()
-	//Variable que contiene la IP del usuario
-	ip_user := ctx.Input.IP()
-	//Variable que contiene el servicio al que se le hace la petición
-	url := ctx.Request.URL.String()
-	//Variable que contiene el método de la petición
-	metodo := ctx.Request.Method
+
+    //Variable que contiene el nombre del API al que se le hace la petición
+    app_name := beego.AppConfig.Strings("appname")
 	//Host del API
 	host := ctx.Request.Host
-	//Variable que contiene el cuerpo del JSON que el usuario envia
-	data_user := string(ctx.Input.RequestBody)
+	//Variable que contiene el end point al que se le realiza la petición
+	end_point := ctx.Request.URL.String()
+    //Variable que contiene el método REST de la petición
+	method := ctx.Request.Method
+	//Variable que contiene la fecha y hora de la operación
+	date := time.Now().String()
+
+	
+	//Variable que contiene la IP del usuario   <----- pendiente
+	ip_user := "MyIP"
+	//Variable que contiene el access token de la peticion  <--- Cuando viene de WSO2, se puede obtener. Cuando se realiza por postman, por ejemplo, no
+	access_token := ctx.Request.Header["Authorization"][0]
+	//Variable que define el tipo de aplicación, sistema operativo, provedor del software o laversión del software de la petición del agente de usuario
+	user_agent := ctx.Request.Header["User-Agent"][0]
+	//Variable que contiene el usuario    <----- pendiente
+	user := "MyUser"
+
 	//Variable que contiene el response body del servicio
 	data_response := ctx.Input.Data()
-	//Variable que contiene el nombre del API al que se le hace la petición
-	app := beego.AppConfig.Strings("appname")
-
-	/*fmt.Println("Nombre API: " + app[0])              //Nombre del API al que se le hace la petición
-	fmt.Println("La fecha de la petición es: " + now) //Fecha de transacción
-	fmt.Println("Este es el query ", ctx.Request.URL.Query().Get("auth"))---> Usuario quien hace la petición WSO2
-	fmt.Println("Este es la IP del usuario que hace la petición: " + ctx.Input.IP())
-	fmt.Println("Este es la URL del servicio a la que se le hace la petición: " + ctx.Request.URL.String()) //URL de la petición
-	fmt.Println("Este es el método de la petición: " + ctx.Request.Method)                                  //Método de la petición
-	fmt.Println("Este es el host del api: " + ctx.Request.Host)                                             //Host desde el que se hace la petición
-	fmt.Println("Data enviada por el usuario:" + data_user)                                                 //Data enviada por el usuario
-	fmt.Println(data_response["json"])                                                                      //En las peticiones get y post se ve la data, devuelve OK cuando se hace un post o un delete
-	*/
-
-	var mensaje = fmt.Sprintf(`{"FechaOperacion": %s, "User": "userWSO2", "IpUser": %s, "UrlService": %s, "Método": %s, "HostApi": %s ,"DataUser":%s, "DataResponse":%s, "ApiName":%s}`, now, ip_user, url, metodo, host, data_user, data_response["json"], app[0])
-
-	sentToRabbit(mensaje)
-
-	beego.Info("Petición auditada")
+		
+	fmt.Println("Nombre API: " ,app_name)    
+	fmt.Println("Host de la petición: " ,host)            
+	fmt.Println("Endpoint ",  end_point) 
+	fmt.Println("method " ,method)  
+	fmt.Println("date  " ,date)  
+	fmt.Println("ip_user" ,ip_user)  
+//	fmt.Println("acces_token: " ,access_token)  
+	fmt.Println("user_agent" ,user_agent)  
+	                                            
+	//fmt.Println(data_response["json"])                                                                      //En las peticiones get y post se ve la data, devuelve OK cuando se hace un post o un delete
+	
+	var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response["json"])
+	beego.Info(log)
+	
 
 }
 
