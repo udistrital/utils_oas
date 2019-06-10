@@ -42,7 +42,7 @@ func ListenRequest(ctx *context.Context) {
 		end_point = ctx.Request.URL.String()
 		method = ctx.Request.Method
 		date = time.Now().String()
-		ip_user = "MyIP"
+		ip_user = ctx.Input.IP()
 		user_agent = ctx.Request.Header["User-Agent"][0]
 		//data_response = ctx.Input.Data()
 		data_response = "ejemplo"
@@ -50,30 +50,34 @@ func ListenRequest(ctx *context.Context) {
 		// *--------- Se implementa try y catch para cuando la petición NO viene de WSO2 y no se tiene access_token
 
 		// TRY
-		defer func () {
-			if r := recover(); r != nil {
+		go func ()  {
+			defer func () {
+				if r := recover(); r != nil {
 
-				access_token = "NO WSO2"
-				user = "NO WSO2 - No user"
-				var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
-				beego.Info(log)
+					access_token = "NO WSO2"
+					user = "NO WSO2 - No user"
+					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
+					beego.Info(log)
+				}
+			}()
+
+			// CATCH
+			access_token = ctx.Request.Header["Authorization"][0]
+			/*---- Obtención del usuario ---- */
+			var usuario Usuario
+			time.Sleep(10 * time.Second)
+			if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
+				user = usuario.Sub
+			}else{
+				fmt.Println("err", err)
+				user = "No user"
 			}
+
+
+			var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
+			beego.Info(log)
 		}()
 
-		// CATCH
-		access_token = ctx.Request.Header["Authorization"][0]
-		/*---- Obtención del usuario ---- */
-		var usuario Usuario
-		if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
-			user = usuario.Sub
-		}else{
-			fmt.Println("err", err)
-			user = "No user"
-		}
-
-
-		var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
-		beego.Info(log)
 
 }
 
