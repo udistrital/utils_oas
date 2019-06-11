@@ -56,7 +56,7 @@ func ListenRequest(ctx *context.Context) {
 
 					access_token = "NO WSO2"
 					user = "NO WSO2 - No user"
-					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
+					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,user_agent,user,data_response)
 					beego.Info(log)
 				}
 			}()
@@ -74,7 +74,7 @@ func ListenRequest(ctx *context.Context) {
 			}
 
 
-			var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
+			var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
 			beego.Info(log)
 		}()
 
@@ -82,10 +82,10 @@ func ListenRequest(ctx *context.Context) {
 }
 
 func Prueba (ctx *context.Context){
-	fmt.Println("holi soy prueba",ctx.Request.Header)
+	fmt.Println("holi soy prueb2",ctx.Request.Header)
 }
 
 func InitMiddleware() {
 	beego.InsertFilter("*", beego.AfterExec, ListenRequest, false)
-	//beego.InsertFilter("*", beego.BeforeExec, Prueba, false)
+	beego.InsertFilter("*", beego.BeforeExec, Prueba, false)
 }

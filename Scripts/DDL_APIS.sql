@@ -13,7 +13,6 @@ CREATE EXTERNAL TABLE IF NOT EXISTS logs.logs_apis_test (
   `method` string COMMENT 'Metodo REST de la peticion',
   `date` string COMMENT 'Fecha y hora de la operacion',
   `ip_user` string COMMENT 'IP del usuario',
-  `access_token` string COMMENT 'Access token asignado al usuario que realiza peticion',
   `user_agent` string COMMENT 'Tipo de aplicacion, sistema operativo, proveedor del software o la version del software de la peticion del agente de usuario',
   `user` string COMMENT 'Nombre de usuario en WSO2 que realiza la peticion',
   `data_response` string COMMENT 'Payload del servicio' 
@@ -21,6 +20,6 @@ CREATE EXTERNAL TABLE IF NOT EXISTS logs.logs_apis_test (
 ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.RegexSerDe'
 WITH SERDEPROPERTIES (
   'serialization.format' = '1',
-  'input.regex' = '([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)'
+  'input.regex' = '([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)@&([^\\r\\n]*)'
 ) LOCATION 's3://logs-wso2-oas-2/cleaned_logs/'
 TBLPROPERTIES ('has_encrypted_data'='false');
