@@ -3,12 +3,15 @@ package auditoria
 import (
 	"fmt"
 	"time"
-	
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
-	//amqp "github.com/streadway/amqp"
+
 )
 
+type Usuario struct {
+		Sub   string     `json:"sub"`
+}
 
 func ListenRequest(ctx *context.Context) {
 
@@ -23,12 +26,15 @@ func ListenRequest(ctx *context.Context) {
 
 		/*---- Información relacionada con el usuario ---- */
 		var ip_user      string      //IP del usuario   <----- pendiente
-		var access_token string 	 //Access token asignado al usuario que realiza peticion  	
+		var access_token string 	 //Access token asignado al usuario que realiza peticion
 		var user_agent   string      //Tipo de aplicación, sistema operativo, provedor del software o laversión del software de la petición del agente de usuario
 		var user 		 string 	 //Nombre de usuario en WSO2 que realiza la petición    <----- pendiente
-		
+
 		/*---- Información relacionada con el cuerpo de la petición ---- */
 		var data_response  string  //Payload del servicio
+
+
+
 
 		/*---- Asignación de variables ----*/
 		app_name = beego.AppConfig.String("appname")
@@ -36,34 +42,50 @@ func ListenRequest(ctx *context.Context) {
 		end_point = ctx.Request.URL.String()
 		method = ctx.Request.Method
 		date = time.Now().String()
-		ip_user = "MyIP"
+		ip_user = ctx.Input.IP()
 		user_agent = ctx.Request.Header["User-Agent"][0]
-		user = "MyUser"
-		//data_response = ctx.Input.Data()	
+		//data_response = ctx.Input.Data()
 		data_response = "ejemplo"
 
 		// *--------- Se implementa try y catch para cuando la petición NO viene de WSO2 y no se tiene access_token
-		
-		// TRY
-		defer func () {
-			if r := recover(); r != nil {
-				//este es el catch
-				access_token = "NO WSO2"
-				var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
-				beego.Info(log)
 
+		// TRY
+		go func ()  {
+			defer func () {
+				if r := recover(); r != nil {
+
+					access_token = "NO WSO2"
+					user = "NO WSO2 - No user"
+					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,user_agent,user,data_response)
+					beego.Info(log)
+				}
+			}()
+
+			// CATCH
+			access_token = ctx.Request.Header["Authorization"][0]
+			/*---- Obtención del usuario ---- */
+			var usuario Usuario
+			time.Sleep(10 * time.Second)
+			if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
+				user = usuario.Sub
+			}else{
+				fmt.Println("err", err)
+				user = "No user"
 			}
+
+
+			var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
+			beego.Info(log)
 		}()
-		
-		// CATCH
-		access_token = ctx.Request.Header["Authorization"][0]
-		var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,access_token,user_agent,user,data_response)
-		beego.Info(log)
-	
+
 
 }
 
+func Prueba (ctx *context.Context){
+	fmt.Println("holi soy prueb2",ctx.Request.Header)
+}
 
 func InitMiddleware() {
 	beego.InsertFilter("*", beego.AfterExec, ListenRequest, false)
+	beego.InsertFilter("*", beego.BeforeExec, Prueba, false)
 }
