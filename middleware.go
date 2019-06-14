@@ -46,7 +46,7 @@ func ListenRequest(ctx *context.Context) {
 		user_agent = ctx.Request.Header["User-Agent"][0]
 		//data_response = ctx.Input.Data()
 		data_response = "ejemplo"
-
+		fmt.Println("cabecera",ctx.Request.Header)
 		// *--------- Se implementa try y catch para cuando la petición NO viene de WSO2 y no se tiene access_token
 
 		// TRY
@@ -56,23 +56,25 @@ func ListenRequest(ctx *context.Context) {
 
 					access_token = "NO WSO2"
 					user = "NO WSO2 - No user"
-					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host,end_point,method,date,ip_user,user_agent,user,data_response)
+					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
 					beego.Info(log)
 				}
 			}()
 
 			// CATCH
 			access_token = ctx.Request.Header["Authorization"][0]
+			fmt.Println("accecs:", access_token)
+
 			/*---- Obtención del usuario ---- */
 			var usuario Usuario
-			time.Sleep(10 * time.Second)
+			fmt.Println("Pre consultar usuario")
 			if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
+				fmt.Println("User sí")
 				user = usuario.Sub
 			}else{
 				fmt.Println("err", err)
 				user = "No user"
 			}
-
 
 			var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
 			beego.Info(log)
@@ -81,11 +83,7 @@ func ListenRequest(ctx *context.Context) {
 
 }
 
-func Prueba (ctx *context.Context){
-	fmt.Println("holi soy prueb2",ctx.Request.Header)
-}
-
 func InitMiddleware() {
 	beego.InsertFilter("*", beego.AfterExec, ListenRequest, false)
-	beego.InsertFilter("*", beego.BeforeExec, Prueba, false)
+
 }
