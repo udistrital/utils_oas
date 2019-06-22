@@ -78,7 +78,7 @@ func GlobalResponseHandler(ctx *context.Context) {
 
 			defer func() {
 				if r := recover(); r != nil {
-					beego.Error(r)
+					// beego.Error(r)
 					out.Body = Body
 					out.Type = "success"
 					ctx.ResponseWriter.WriteHeader(200)
