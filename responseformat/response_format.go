@@ -88,7 +88,7 @@ func GlobalResponseHandler(ctx *context.Context) {
 			if reflect.ValueOf(Body).IsNil() {
 				out.Body = nil
 				out.Type = "No Data Found"
-				ctx.ResponseWriter.WriteHeader(204)
+				ctx.ResponseWriter.WriteHeader(200)
 			} else {
 				out.Body = Body
 				out.Type = "success"
