@@ -67,7 +67,7 @@ beego.BConfig.RecoverFunc = responseformat.GlobalResponseHandler
 
 ```go
 
-func (j *ArbolRubrosController) FullArbolRubro() {
+func (j *Controller) FullArbolRubro() {
 	params := j.GetString(":someParams")
 	data := dataHelper.ProcessData(params)
 	j.Data["json"] = data
