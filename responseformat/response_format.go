@@ -18,14 +18,9 @@ type response struct {
 func SetResponseFormat(c *beego.Controller, data interface{}, code string, status int) {
 	res := response{}
 	c.Ctx.Output.SetStatus(status)
-	if status >= 100 && status < 200 {
-		res.Type = "information"
-	} else if status == 200 && status < 300 {
+
+	if status == 200 {
 		res.Type = "success"
-	} else if status == 300 && status < 400 {
-		res.Type = "redirection"
-	} else if status == 404 {
-		res.Type = "not found"
 	} else {
 		res.Type = "error"
 	}
