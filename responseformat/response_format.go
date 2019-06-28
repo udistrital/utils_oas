@@ -37,27 +37,7 @@ func SetResponseFormat(c *beego.Controller, data interface{}, code string, statu
 	c.ServeJSON()
 }
 
-func ModifyBeegoDefaultResponseFormat(ctx *context.Context, data interface{}, status int) {
-	res := response{}
-	ctx.Output.SetStatus(status)
-	if status >= 100 && status < 200 {
-		res.Type = "information"
-	} else if status == 200 && status < 300 {
-		res.Type = "success"
-	} else if status == 300 && status < 400 {
-		res.Type = "redirection"
-	} else if status == 404 {
-		res.Type = "not found"
-	} else {
-		res.Type = "error"
-	}
-
-	res.Body = data
-
-	ctx.Output.JSON(res, false, false)
-}
-
-// GlobalResponseHandler ... Global defer for any go panic at the API.
+// GlobalResponseHandler ... Global defer for any go panic in the Beego API.
 func GlobalResponseHandler(ctx *context.Context) {
 	out := response{}
 	Body := ctx.Input.Data()["json"]
