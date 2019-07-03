@@ -45,6 +45,7 @@ func ListenRequest(ctx *context.Context) {
 		//data_response = "ejemplo"
 		// *--------- Se implementa try y catch para cuando la petición NO viene de WSO2 y no se tiene access_token
 
+		beego.Info("cabecera",ctx.Request.Header)
 		//
 		go func ()  {
 			defer func () {
