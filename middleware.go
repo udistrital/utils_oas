@@ -56,7 +56,11 @@ func ListenRequest(ctx *context.Context) {
 					access_token = "NO WSO2"
 					user = "NO WSO2 - No user"
 					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
-					beego.Info(log)
+					beego.Info(log)	
+					if(end_point != "/"){
+						beego.Info(log)
+					}
+					
 				}
 			}()
 
@@ -69,7 +73,9 @@ func ListenRequest(ctx *context.Context) {
 					access_token = "Error WSO2"
 					user = "Error wso2"
 					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
-					beego.Info(log)
+					if(end_point != "/"){
+						beego.Info(log)
+					}
 				}
 
 			}()
@@ -80,7 +86,9 @@ func ListenRequest(ctx *context.Context) {
 				user = "No user"
 			}
 			var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
-			beego.Info(log)
+			if(end_point != "/"){
+				beego.Info(log)
+			}
 		}()
 
 }
