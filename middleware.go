@@ -56,11 +56,10 @@ func ListenRequest(ctx *context.Context) {
 					access_token = "NO WSO2"
 					user = "NO WSO2 - No user"
 					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
-					beego.Info(log)	
-					if(end_point != "/"){
+		   		if(end_point != "/"){
 						beego.Info(log)
 					}
-					
+
 				}
 			}()
 
