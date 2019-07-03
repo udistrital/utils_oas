@@ -44,8 +44,6 @@ func ListenRequest(ctx *context.Context) {
 		data_response = ctx.Input.Data()
 		//data_response = "ejemplo"
 		// *--------- Se implementa try y catch para cuando la petición NO viene de WSO2 y no se tiene access_token
-
-		beego.Info("cabecera",ctx.Request.Header)
 		//
 		go func ()  {
 			defer func () {
@@ -56,11 +54,10 @@ func ListenRequest(ctx *context.Context) {
 					access_token = "NO WSO2"
 					user = "NO WSO2 - No user"
 					var log = fmt.Sprintf(`%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
-					beego.Info(log)	
-					if(end_point != "/"){
+		   		if(end_point != "/"){
 						beego.Info(log)
 					}
-					
+
 				}
 			}()
 
