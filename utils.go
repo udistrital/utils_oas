@@ -4,9 +4,8 @@ import (
 
 	"encoding/json"
 	"net/http"
-  "fmt"
   "github.com/astaxie/beego/context"
-
+  "github.com/astaxie/beego"
 )
 
 func GetJsonWithHeader(urlp string, target interface{}, ctx *context.Context) error {

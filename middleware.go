@@ -82,7 +82,6 @@ func ListenRequest(ctx *context.Context) {
 			beego.Info(log)
 		}()
 
-
 }
 
 func InitMiddleware() {
