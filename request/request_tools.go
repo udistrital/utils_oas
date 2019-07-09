@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
-
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
+
+
 )
+
+var global *context.Context;
 
 func SendJson(urlp string, trequest string, target interface{}, datajson interface{}) error {
 	b := new(bytes.Buffer)
@@ -16,17 +20,44 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 	}
 	//proxyUrl, err := url.Parse("http://10.20.4.15:3128")
 	//http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
+
 	client := &http.Client{}
 	req, err := http.NewRequest(trequest, urlp, b)
-	r, err := client.Do(req)
-	//r, err := http.Post(url, "application/json; charset=utf-8", b)
-	if err != nil {
-		beego.Error("error", err)
-		return err
-	}
-	defer r.Body.Close()
+	defer func () {
+		//Catch
+		if r := recover(); r != nil {
 
-	return json.NewDecoder(r.Body).Decode(target)
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				beego.Error("Error reading response. ", err)
+			}
+
+			defer resp.Body.Close()
+			json.NewDecoder(resp.Body).Decode(target)
+		}
+	}()
+
+	//try
+	header := GetHeader().Request.Header
+	req.Header.Set("Authorization", header["Authorization"][0])
+
+	resp, err := client.Do(req)
+	if err != nil {
+		beego.Error("Error reading response. ", err)
+	}
+
+	defer resp.Body.Close()
+	return json.NewDecoder(resp.Body).Decode(target)
+}
+
+func SetHeader(ctx *context.Context){
+	global = ctx
+
+}
+
+func GetHeader()(ctx *context.Context){
+	return global
 }
 
 func GetJsonWSO2(urlp string, target interface{}) error {
@@ -48,15 +79,40 @@ func GetJsonWSO2(urlp string, target interface{}) error {
 }
 
 func GetJson(urlp string, target interface{}) error {
-	//proxyUrl, err := url.Parse("http://10.20.4.15:3128")
-	//http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
-	r, err := http.Get(urlp)
-	if err != nil {
-		return err
-	}
-	defer r.Body.Close()
 
-	return json.NewDecoder(r.Body).Decode(target)
+
+	req, err := http.NewRequest("GET",urlp, nil)
+  if err != nil {
+    beego.Error("Error reading request. ", err)
+  }
+
+	defer func () {
+		//Catch
+		if r := recover(); r != nil {
+
+			client := &http.Client{}
+		  resp, err := client.Do(req)
+		  if err != nil {
+		    beego.Error("Error reading response. ", err)
+		  }
+
+			defer resp.Body.Close()
+			json.NewDecoder(resp.Body).Decode(target)
+		}
+	}()
+
+	//try
+	header := GetHeader().Request.Header
+  req.Header.Set("Authorization", header["Authorization"][0])
+  client := &http.Client{}
+
+  resp, err := client.Do(req)
+  if err != nil {
+    beego.Error("Error reading response. ", err)
+  }
+
+	defer resp.Body.Close()
+	return json.NewDecoder(resp.Body).Decode(target)
 }
 
 func diff(a, b time.Time) (year, month, day int) {
