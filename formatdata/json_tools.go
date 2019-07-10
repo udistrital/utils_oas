@@ -6,11 +6,21 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"gopkg.in/go-playground/validator.v9"
 )
 
+var validate *validator.Validate
+
 func FillStruct(m interface{}, s interface{}) (err error) {
+	validate = validator.New()
 	j, _ := json.Marshal(m)
 	err = json.Unmarshal(j, s)
+	valErr := validate.Struct(s)
+
+	if valErr != nil {
+		err = valErr
+	}
 	return
 }
 
