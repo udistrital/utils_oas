@@ -8,17 +8,18 @@ import (
 	"github.com/astaxie/beego"
 )
 
-type response struct {
+// Response struct ... Response format JSON
+type Response struct {
 	Code string
 	Type string
 	Body interface{}
 }
 
 // formatResponseObject ... format to response structure.
-func formatResponseObject(data interface{}, code string, status int) response {
-	res := response{}
+func formatResponseObject(data interface{}, code string, status int) Response {
+	res := Response{}
 
-	if status == 200 {
+	if status >= 200 && status < 300 {
 		res.Type = "success"
 	} else {
 		res.Type = "error"
@@ -67,4 +68,12 @@ func GlobalResponseHandler(ctx *context.Context) {
 			out = formatResponseObject("Unknow error", "", status)
 		}
 	}
+}
+
+// CheckResponseError ... return true if response format type is an error.
+func CheckResponseError(response Response) bool {
+	if response.Type == "error" {
+		return true
+	}
+	return false
 }

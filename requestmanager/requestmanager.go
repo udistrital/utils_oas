@@ -21,9 +21,14 @@ func FillRequestWithPanic(c *beego.Controller, output interface{}) {
 		panic(err.Error())
 	}
 	valErr := validate.Struct(output)
-
 	if valErr != nil {
 		var errMess []interface{}
+
+		if e, ok := valErr.(*validator.InvalidValidationError); ok {
+			logs.Debug(e)
+			responseformat.SetResponseFormat(c, e, "", 422)
+			return
+		}
 		for _, err := range valErr.(validator.ValidationErrors) {
 			errMess = append(errMess, fmt.Sprintf("%s", err))
 		}
