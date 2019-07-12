@@ -118,3 +118,17 @@ func JsonPrint(x interface{}) (err error) {
 	fmt.Print(string(b))
 	return
 }
+
+// StructValidation ... Validate struct by tags
+func StructValidation(data interface{}) (errMess []interface{}) {
+	validate = validator.New()
+	valErr := validate.Struct(data)
+	if valErr != nil {
+
+		for _, err := range valErr.(validator.ValidationErrors) {
+			errMess = append(errMess, fmt.Sprintf("%s", err))
+		}
+
+	}
+	return
+}

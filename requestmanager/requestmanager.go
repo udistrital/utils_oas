@@ -2,8 +2,8 @@ package requestmanager
 
 import (
 	"encoding/json"
-	"fmt"
 
+	"github.com/udistrital/utils_oas/formatdata"
 	"github.com/udistrital/utils_oas/responseformat"
 
 	"github.com/astaxie/beego"
@@ -13,26 +13,15 @@ import (
 
 var validate *validator.Validate
 
-// FillRequestWithPanic ... unmarshal body request to an interface . panic if some error hapen.
+// FillRequestWithPanic ... unmarshal body request to an interface . panic if some error hapen. Only objects no Arrays.
 func FillRequestWithPanic(c *beego.Controller, output interface{}) {
-	validate = validator.New()
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, output); err != nil {
 		logs.Error(err.Error())
 		panic(err.Error())
 	}
-	valErr := validate.Struct(output)
-	if valErr != nil {
-		var errMess []interface{}
 
-		if e, ok := valErr.(*validator.InvalidValidationError); ok {
-			logs.Debug(e)
-			responseformat.SetResponseFormat(c, e, "", 422)
-			return
-		}
-		for _, err := range valErr.(validator.ValidationErrors) {
-			errMess = append(errMess, fmt.Sprintf("%s", err))
-		}
-		logs.Error(errMess)
-		responseformat.SetResponseFormat(c, errMess, "", 422)
+	errMes := formatdata.StructValidation(output)
+	if errMes != nil {
+		responseformat.SetResponseFormat(c, errMes, "", 422)
 	}
 }
