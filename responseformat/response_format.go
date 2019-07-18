@@ -1,7 +1,12 @@
 package responseformat
 
 import (
+	"encoding/json"
+	"fmt"
 	"reflect"
+	"strings"
+
+	"github.com/lib/pq"
 
 	"github.com/astaxie/beego/context"
 
@@ -55,19 +60,30 @@ func GlobalResponseHandler(ctx *context.Context) {
 		beego.Error(r)
 		status = 500
 
-		out = formatResponseObject(r, "", status)
-	} else {
-		if reflect.ValueOf(Body).IsValid() {
-
-			status = 200
-			out = formatResponseObject(Body, "", status)
-
-		} else {
-			beego.Error("Unknow error")
-			status = 500
-			out = formatResponseObject("Unknow error", "", status)
-		}
+		out = formatResponseObject(fmt.Sprintf("%s", r), "", status)
+		return
 	}
+	if reflect.ValueOf(Body).IsValid() {
+		if _, e := Body.([]interface{}); e {
+			if len(Body.([]interface{})) == 0 {
+				Body = make(map[string]interface{})
+			}
+		}
+		status = 200
+		switch Body.(type) {
+		case *json.UnmarshalTypeError, *json.UnmarshalFieldError, *pq.Error:
+			status = 500
+		case string:
+			Body, status = stringBeegoErrorCatch(Body.(string))
+		}
+		out = formatResponseObject(Body, "", status)
+		return
+	}
+
+	beego.Error("Unknow error")
+	status = 500
+	Body = "Unknow error"
+	out = formatResponseObject(Body, "", status)
 }
 
 // CheckResponseError ... return true if response format type is an error.
@@ -76,4 +92,18 @@ func CheckResponseError(response Response) bool {
 		return true
 	}
 	return false
+}
+
+func stringBeegoErrorCatch(err string) (body interface{}, status int) {
+	if strings.Contains(err, "json:") || strings.Contains(err, "Error:") || strings.Contains(err, "wrong field/column name") || strings.Contains(err, "pq:") || strings.Contains(err, "unknown field/column name") {
+		return err, 500
+	}
+
+	switch err {
+	case "<QuerySeter> no row found":
+		data := make(map[string]interface{})
+		return data, 200
+	}
+
+	return err, 200
 }
