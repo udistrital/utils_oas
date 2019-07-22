@@ -12,7 +12,7 @@ Para la implementación de la librería en APIs CRUD se deben seguir los siguien
 
 1. En la sección de código del archivo main.go correspondiente al import, realizar la importación de la librería de auditoría 
 
-```
+```go
   import (
     _ "github.com/udistrital/titan_api_crud/routers"
     "github.com/udistrital/utils_oas/apiStatusLib"
@@ -26,7 +26,7 @@ Para la implementación de la librería en APIs CRUD se deben seguir los siguien
 ```
 2. En el mismo archivo main.go, realizar el llamado a la librería por medio del código auditoria.InitMiddleware(): 
 
-```
+```go
   func main() {
     orm.RegisterDataBase("default", "postgres", "postgres://"+beego.AppConfig.String("PGuser")+":"+beego.AppConfig.String("PGpass")+"@"+beego.AppConfig.String("PGurls")+"/"+beego.AppConfig.String("PGdb")+"?sslmode=disable&search_path="+beego.AppConfig.String("PGschemas")+"")
     apistatus.Init()
@@ -45,7 +45,7 @@ Para la implementación de la librería en APIs CRUD se deben seguir los siguien
 
 1. En la sección de código del archivo main.go correspondiente al import, realizar la importación de la librería de auditoría
 
-```
+```go
   import (
     _ "github.com/udistrital/titan_api_mid/routers"
     "github.com/udistrital/utils_oas/apiStatusLib"
@@ -57,7 +57,7 @@ Para la implementación de la librería en APIs CRUD se deben seguir los siguien
 ```
 2. En el mismo archivo main.go, realizar el llamado a la librería por medio del código auditoria.InitMiddleware(): 
 
-```
+```go
   func main() {
     orm.RegisterDataBase("default", "postgres", "postgres://"+beego.AppConfig.String("PGuser")+":"+beego.AppConfig.String("PGpass")+"@"+beego.AppConfig.String("PGurls")+"/"+beego.AppConfig.String("PGdb")+"?sslmode=disable&search_path="+beego.AppConfig.String("PGschemas")+"")
     apistatus.Init()
@@ -70,6 +70,7 @@ Para la implementación de la librería en APIs CRUD se deben seguir los siguien
 
 3. Crear un archivo llamado interceptor.go en la carpeta raíz del proyecto:
 
+```
 myproject
 ├── conf
 │   └── app.conf
@@ -88,11 +89,12 @@ myproject
 └── views
 |   └── index.tpl│  
 └── interceptor.go 
+```
 
 4. Copiar en él el mismo contenido disponible en 
 [Interceptor](https://github.com/udistrital/auditoria/blob/dev/interceptor.go). Este archivo debe lucir así:
 
-```
+```go
   package main
   import (
     "github.com/astaxie/beego"
