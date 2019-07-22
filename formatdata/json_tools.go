@@ -6,11 +6,21 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"gopkg.in/go-playground/validator.v9"
 )
 
+var validate *validator.Validate
+
 func FillStruct(m interface{}, s interface{}) (err error) {
+	validate = validator.New()
 	j, _ := json.Marshal(m)
 	err = json.Unmarshal(j, s)
+	valErr := validate.Struct(s)
+
+	if valErr != nil {
+		err = valErr
+	}
 	return
 }
 
@@ -106,5 +116,19 @@ func JsonPrint(x interface{}) (err error) {
 		return
 	}
 	fmt.Print(string(b))
+	return
+}
+
+// StructValidation ... Validate struct by tags
+func StructValidation(data interface{}) (errMess []interface{}) {
+	validate = validator.New()
+	valErr := validate.Struct(data)
+	if valErr != nil {
+
+		for _, err := range valErr.(validator.ValidationErrors) {
+			errMess = append(errMess, fmt.Sprintf("%s", err))
+		}
+
+	}
 	return
 }

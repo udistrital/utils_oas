@@ -7,10 +7,15 @@ import (
 
 	"github.com/astaxie/beego"
 	. "github.com/mndrix/golog"
-	"github.com/udistrital/api_mid_financiera/models"
 	"github.com/udistrital/utils_oas/formatdata"
 	"github.com/udistrital/utils_oas/request"
 )
+
+type Predicado struct {
+	Id          int    `orm:"column(id);pk;auto"`
+	Nombre      string `orm:"column(nombre)"`
+	Descripcion string `orm:"column(descripcion)"`
+}
 
 type EntornoReglas struct {
 	predicados string
@@ -18,11 +23,13 @@ type EntornoReglas struct {
 }
 
 func (e *EntornoReglas) Agregar_dominio(dominio string) {
-	var v []models.Predicado
-	if err := request.GetJson("http://"+beego.AppConfig.String("Urlruler")+":"+beego.AppConfig.String("Portruler")+"/"+beego.AppConfig.String("Nsruler")+"/predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
+	var v []Predicado
+	if err := request.GetJson(beego.AppConfig.String("rulerService")+"predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
 		for i := 0; i < len(v); i++ {
 			e.base = e.base + v[i].Nombre + "\n"
 		}
+	} else {
+		beego.Error(err.Error())
 	}
 }
 
@@ -153,10 +160,10 @@ func (e *EntornoReglas) Ejecutar_all_result(regla string, variable string) (res 
 func CargarReglasBase(dominio string) (reglas string) {
 	//carga de reglas desde el ruler
 	var reglasbase string = ``
-	var v []models.Predicado
+	var v []Predicado
 
 	fmt.Println(dominio)
-	if err := request.GetJson("http://"+beego.AppConfig.String("Urlruler")+":"+beego.AppConfig.String("Portruler")+"/"+beego.AppConfig.String("Nsruler")+"/predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
+	if err := request.GetJson(beego.AppConfig.String("Urlruler")+"predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
 
 		reglasbase = reglasbase + FormatoReglas(v) //funcion general para dar formato a reglas cargadas desde el ruler
 	} else {
@@ -167,7 +174,7 @@ func CargarReglasBase(dominio string) (reglas string) {
 	return reglasbase
 }
 
-func FormatoReglas(v []models.Predicado) (reglas string) {
+func FormatoReglas(v []Predicado) (reglas string) {
 	var arregloReglas = make([]string, len(v))
 	reglas = ""
 	//var respuesta []models.FormatoPreliqu
