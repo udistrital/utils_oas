@@ -7,9 +7,11 @@ import (
 	"github.com/astaxie/beego/logs"
 )
 
-func tiempo_bogota() time.Time {
+var tiempoBogota time.Time
+
+func Tiempo_bogota() time.Time {
 	fmt.Println("tiempo antes de correccion")
-	var tiempoBogota = time.Now()
+	tiempoBogota = time.Now()
 	logs.Info(tiempoBogota)
 
 	loc, err := time.LoadLocation("America/Bogota")
@@ -23,9 +25,9 @@ func tiempo_bogota() time.Time {
 	return tiempoBogota
 }
 
-func tiempoBogotaFormato() string {
+func TiempoBogotaFormato() string {
 	fmt.Println("tiempo con formato")
-	var tiempoFormato = tiempo_bogota().Format(time.RFC3339Nano)
+	var tiempoFormato = Tiempo_bogota().Format(time.RFC3339Nano)
 	logs.Info(tiempoFormato)
 	return tiempoFormato
 }
