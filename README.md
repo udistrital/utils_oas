@@ -28,7 +28,7 @@ Este es un paquete de librerías y utilidades generales para las aplicaciones de
 
   Funcionalidades de seguridad para aplicaciones legadas, híbridas y nuevas en go
 - <details>
-    <summary><b>time_bogota<b></summary>
+    <summary><b>time_bogota</b></summary>
 
     importar:
 
