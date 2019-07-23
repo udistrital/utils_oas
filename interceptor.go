@@ -1,4 +1,4 @@
-package main
+package auditoria
 
 import (
   "github.com/astaxie/beego"
@@ -6,11 +6,11 @@ import (
   "github.com/udistrital/utils_oas/request"
 )
 
-func ListenRequest(ctx *context.Context) {
+func InterceptMidRequest(ctx *context.Context) {
   request.SetHeader(ctx)
 
 }
 
 func InitInterceptor() {
-	 beego.InsertFilter("*", beego.BeforeExec, ListenRequest, false)
+	 beego.InsertFilter("*", beego.BeforeExec, InterceptMidRequest, false)
 }
