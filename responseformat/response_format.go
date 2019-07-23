@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/globalsign/mgo"
 	"github.com/lib/pq"
 
 	"github.com/astaxie/beego/context"
@@ -71,7 +72,7 @@ func GlobalResponseHandler(ctx *context.Context) {
 		}
 		status = 200
 		switch Body.(type) {
-		case *json.UnmarshalTypeError, *json.UnmarshalFieldError, *pq.Error:
+		case *json.UnmarshalTypeError, *json.UnmarshalFieldError, *pq.Error, *mgo.LastError:
 			status = 500
 		case string:
 			Body, status = stringBeegoErrorCatch(Body.(string))
