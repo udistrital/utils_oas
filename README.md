@@ -27,7 +27,73 @@ Este es un paquete de librerías y utilidades generales para las aplicaciones de
 - **security**
 
   Funcionalidades de seguridad para aplicaciones legadas, híbridas y nuevas en go
+- <details>
+    <summary><b>time_bogota</b></summary>
 
+    importar:
+
+    ```go
+    "github.com/udistrital/utils_oas/time_bogota"
+    ```
+
+    2 funcinalidades:
+
+    - Tiempo_bogota : 
+     Da la hora de Bogota sin importar la zona horaria de la maquina o contenedor
+
+        ***usar en codigo (remplarar)***
+
+        ```go
+        VariableDeTiempo = tiem.Now()
+        ```
+        por
+
+        ```go
+        VariableDeTiempo = time_bogota.Tiempo_bogota()
+        ```
+
+    - TiempoBogotaFormato()
+        Esta funcion da el formato para la hora y que esta sea aceptada por la base de datos.
+
+        ya que esta funcion retorna un string, se debe cambiar en los modelos del api donde se quiera usar la funcion, esto evitara problemas con la hora y que genere una hora con UTC 0
+
+        ***en codigo***
+
+        ```go
+        type ResolucionEstado struct {
+            Id            int
+            FechaRegistro time.Time
+            Usuario       string
+            Estado        *EstadoResolucion
+            Resolucion    *Resolucion
+        }
+        ```
+
+        por
+
+        ```go
+        type ResolucionEstado struct {
+            Id            int
+            FechaRegistro string
+            Usuario       string
+            Estado        *EstadoResolucion
+            Resolucion    *Resolucion
+        }
+        ```
+        ---
+        ```go
+        VariableDeTiempo = tiem.Now()
+        ```
+        por
+
+        ```go
+        VariableDeTiempo = time_bogota.TiempoBogotaFormato()
+        ```
+
+
+
+
+</details>
 
 ## Licencia
 

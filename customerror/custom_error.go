@@ -16,7 +16,7 @@ func (c *CustomErrorController) Error400() {
 }
 
 func (c *CustomErrorController) Error404() {
-	outputError := map[string]interface{}{"Status": "404", "Message": "Not found resource", "System": c.Data["System"], "Development": c.Data["development"]}
+	outputError := map[string]interface{}{"Status": "404", "Message": "Not found resource", "System": c.Data["system"], "Development": c.Data["development"]}
 
 	c.Data["json"] = outputError
 	c.ServeJSON()
