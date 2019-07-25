@@ -102,13 +102,13 @@ myproject
     "github.com/udistrital/utils_oas/request"
   )
 
-  func ListenRequest(ctx *context.Context) {
-    request.SetHeader(ctx)
+  func InterceptMidRequest(ctx *context.Context) {
+  request.SetHeader(ctx)
 
   }
 
   func InitInterceptor() {
-    beego.InsertFilter("*", beego.BeforeExec, ListenRequest, false)
+    beego.InsertFilter("*", beego.BeforeExec, InterceptMidRequest, false)
   }
 ```
 5. Para entornos locales, basta con ejecutar nuevamente el API para que la librería de auditoría genere los logs; esto puede ser revisado en la consola. Para entornos de desarrollo (dev), preproducción(test) y producción(prod), se debe realizar el respectivo push a Github, que permite la construcción del API en estos entornos y por ende la ejecución de la última versión de la librería. 
