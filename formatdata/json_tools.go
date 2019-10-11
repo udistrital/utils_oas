@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/globalsign/mgo/bson"
 	"gopkg.in/go-playground/validator.v9"
 )
 
@@ -170,4 +171,14 @@ func ToMap(in interface{}, tag string) (map[string]interface{}, error) {
 		}
 	}
 	return out, err
+}
+
+// FillStructBson ... Unmarshal Bson types to struct
+func FillStructBson(in interface{}, out interface{}) {
+	j, _ := bson.Marshal(in)
+	err := bson.Unmarshal(j, out)
+	if err != nil {
+		panic(err.Error())
+	}
+	return
 }
