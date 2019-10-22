@@ -80,8 +80,9 @@ func ListenRequest(ctx *context.Context) {
 		date = time.Now().String()
 		ip_user = ctx.Input.IP()
 		user_agent = ctx.Request.Header["User-Agent"][0]
-		//data_response = ctx.Input.Data()
-		data_response = "ejemplo"
+		data_response = ctx.Input.Data()
+		//data_response = "ejemplo"
+
 		// *--------- Se implementa try y catch para cuando la petición NO viene de WSO2 y no se tiene access_token
 		//
 		go func ()  {
