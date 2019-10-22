@@ -6,11 +6,50 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
-
+	"github.com/patrickmn/go-cache"
 )
 
 type Usuario struct {
 		Sub   string     `json:"sub"`
+		Date  time.Time
+}
+
+var userMap = make(map[string]string)
+var c = cache.New(5*time.Minute, 10*time.Minute)
+
+func getUserInfo2(ctx *context.Context)(u string){
+	
+	var usuario Usuario
+
+	if val, ok := userMap[ctx.Request.Header["Authorization"][0]]; ok {
+		return val
+	}else{
+		if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
+			userMap[ctx.Request.Header["Authorization"][0]] = usuario.Sub
+			return usuario.Sub
+		}else{
+			userMap[ctx.Request.Header["Authorization"][0]] = "No user"
+			return "No user"
+		}
+	}
+}
+
+func getUserInfo(ctx *context.Context)(u string){
+	
+	var usuario Usuario
+	if x, found := c.Get(ctx.Request.Header["Authorization"][0]); found {
+		foo := x.(string)
+		return foo
+	}else{
+		if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
+			c.Set(ctx.Request.Header["Authorization"][0], usuario.Sub, cache.DefaultExpiration)
+			return usuario.Sub
+		
+		}else{
+			c.Set(ctx.Request.Header["Authorization"][0],"No user", cache.DefaultExpiration)
+			return "No user"
+		}
+	}
 }
 
 func ListenRequest(ctx *context.Context) {
@@ -41,8 +80,8 @@ func ListenRequest(ctx *context.Context) {
 		date = time.Now().String()
 		ip_user = ctx.Input.IP()
 		user_agent = ctx.Request.Header["User-Agent"][0]
-		data_response = ctx.Input.Data()
-		//data_response = "ejemplo"
+		//data_response = ctx.Input.Data()
+		data_response = "ejemplo"
 		// *--------- Se implementa try y catch para cuando la petición NO viene de WSO2 y no se tiene access_token
 		//
 		go func ()  {
@@ -63,7 +102,7 @@ func ListenRequest(ctx *context.Context) {
 
 			// try
 			access_token = ctx.Request.Header["Authorization"][0]
-			var usuario Usuario
+			
 			/*---- Obtención del usuario ---- */
 			defer func () {
 				if r := recover(); r != nil {
@@ -77,11 +116,7 @@ func ListenRequest(ctx *context.Context) {
 
 			}()
 
-			if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
-				user = usuario.Sub
-			}else{
-				user = "No user"
-			}
+			user = getUserInfo(ctx)			
 			var log = fmt.Sprintf(`@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name,host,end_point,method,date,ip_user,user_agent,user,data_response)
 			if(end_point != "/"){
 				beego.Info(log)

@@ -4,9 +4,138 @@ Resources:
     Type: 'AWS::S3::Bucket'
     Properties:
       AccessControl: Private
-      BucketName: logs-wso2-oas
+      BucketName: oas-logs-wso2
   LogsAPIsBucket:
     Type: 'AWS::S3::Bucket'
     Properties:
       AccessControl: Private
-      BucketName: logs-apis-oas
+      BucketName: oas-logs-apis
+  AuditoriaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com" 
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "s3Access"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: 
+                  - "logs:CreateExportTask"
+                  - "logs:DescribeExportTasks"
+                  - "logs:CreateLogStream"
+                  - "logs:DescribeLogGroups"
+                  - "s3:PutBucketPolicy"
+                  - "s3:CreateBucket"
+                  - "s3:ListBucket"
+                  - "logs:CreateLogGroup"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+  StatesExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - !Sub states.${AWS::Region}.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: StatesExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "lambda:InvokeFunction"
+                Resource: "*"
+  S3ExportFunction: 
+    Type: "AWS::Lambda::Function"
+    Properties: 
+      FunctionName: "S3ExportFunction"
+      Handler: "index.handler"
+      Role: 
+        Fn::GetAtt: 
+          - "AuditoriaRole"
+          - "Arn"
+      Code: 
+        S3Bucket: "oas-lambda-functions"
+        S3Key: "s3exportfunction.zip"
+      Runtime: "nodejs8.10"
+      Timeout: 25
+  AuditoriaStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: Auditoria-exportLogs-StateMachine
+      DefinitionString: 
+        !Sub
+        - |-
+          {
+              "StartAt": "CreateExportTask",
+              "States": {
+                  "CreateExportTask": {
+                      "Type": "Task",
+                      "Resource": "${lambdaArn}",
+                      "Next": "IsAllLogsExported"
+                  },
+                  "IsAllLogsExported": {
+                      "Type": "Choice",
+                      "Choices": [
+                          {
+                              "Variable": "$.continue",
+                              "BooleanEquals": true,
+                              "Next": "CreateExportTask"
+                          }
+                      ],
+                      "Default": "SuccessState"
+                  },
+                  "SuccessState": {
+                      "Type": "Succeed"
+                  }
+              }
+          }
+        - {lambdaArn: !GetAtt [ S3ExportFunction, Arn ]}
+      RoleArn: !GetAtt [ StatesExecutionRole, Arn ]
+  ReglaDeVolcado: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "Regla para volcado de Logs"
+      ScheduleExpression: "rate(1 day)"
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: 
+            Fn::GetAtt: 
+              - "AuditoriaStateMachine"
+              - "Name"
+          Id: "TargetStateMachineV1"
+          Input : 
+            !Sub
+            - |-
+              {
+                "region":"${AWS::Region}",
+                "logGroupFilter":"${logGroupFilter}",
+                "s3BucketName":"${BucketName}",
+                "logFolderName": ""
+              }
+            - {BucketName: "oas-logs-apis", logGroupFilter: logGroupFilterParameter}
+Parameters: 
+  logGroupFilterParameter: 
+    Type: String
+    Default: "/ecs/"
+    Description: Filtro para logs a volcar.
