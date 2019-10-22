@@ -6,7 +6,7 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
-
+	"github.com/patrickmn/go-cache"
 )
 
 type Usuario struct {
@@ -15,8 +15,9 @@ type Usuario struct {
 }
 
 var userMap = make(map[string]string)
+var c = cache.New(5*time.Minute, 10*time.Minute)
 
-func getUserInfo(ctx *context.Context)(u string){
+func getUserInfo2(ctx *context.Context)(u string){
 	
 	var usuario Usuario
 
@@ -28,6 +29,24 @@ func getUserInfo(ctx *context.Context)(u string){
 			return usuario.Sub
 		}else{
 			userMap[ctx.Request.Header["Authorization"][0]] = "No user"
+			return "No user"
+		}
+	}
+}
+
+func getUserInfo(ctx *context.Context)(u string){
+	
+	var usuario Usuario
+	if x, found := c.Get(ctx.Request.Header["Authorization"][0]); found {
+		foo := x.(string)
+		return foo
+	}else{
+		if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
+			c.Set(ctx.Request.Header["Authorization"][0], usuario.Sub, cache.DefaultExpiration)
+			return usuario.Sub
+		
+		}else{
+			c.Set(ctx.Request.Header["Authorization"][0],"No user", cache.DefaultExpiration)
 			return "No user"
 		}
 	}
