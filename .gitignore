@@ -19,3 +19,5 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+Scripts/s3exportfunction.zip
