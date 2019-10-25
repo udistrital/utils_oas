@@ -3,6 +3,7 @@ package time_bogota
 import (
 	"fmt"
 	"time"
+	"strings"
 
 	"github.com/astaxie/beego/logs"
 )
@@ -30,4 +31,12 @@ func TiempoBogotaFormato() string {
 	var tiempoFormato = Tiempo_bogota().Format(time.RFC3339Nano)
 	logs.Info(tiempoFormato)
 	return tiempoFormato
+}
+
+func TiempoCorreccionFormato(inputDate string) string {
+	inputDate = strings.ToLower(inputDate)
+	inputDate = strings.Replace(inputDate, " +0000 +0000", "", -1)
+	inputDate = strings.Replace(inputDate, " ", "T", -1)
+	inputDate = inputDate + "Z"
+	return inputDate
 }

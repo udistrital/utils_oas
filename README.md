@@ -36,7 +36,7 @@ Este es un paquete de librerías y utilidades generales para las aplicaciones de
     "github.com/udistrital/utils_oas/time_bogota"
     ```
 
-    2 funcinalidades:
+    3 funcinalidades: 
 
     - Tiempo_bogota : 
      Da la hora de Bogota sin importar la zona horaria de la maquina o contenedor
@@ -53,6 +53,8 @@ Este es un paquete de librerías y utilidades generales para las aplicaciones de
         ```
 
     - TiempoBogotaFormato()
+        ***(Nota : esta funcion funciona perfectamente en peticiones POST, para los put puede mandar lio asi que se recomienda usar para los PUT la tercera funcion aqui nombrada)***
+        
         Esta funcion da el formato para la hora y que esta sea aceptada por la base de datos.
 
         ya que esta funcion retorna un string, se debe cambiar en los modelos del api donde se quiera usar la funcion, esto evitara problemas con la hora y que genere una hora con UTC 0
@@ -89,7 +91,15 @@ Este es un paquete de librerías y utilidades generales para las aplicaciones de
         ```go
         VariableDeTiempo = time_bogota.TiempoBogotaFormato()
         ```
-
+    - TiempoCorreccionFormato(inputDate string) : esta funcion recibe un string y devuelve otro transformado, esta funcion surge como solucion al problema de que las fechas al traerlas de la base de datos pueden llegar en el siguiente formato `2019-10-08 18:26:45.58 +0000 +0000`, este formato al hacer un update en la base de datos provoca errores, por ende esta funcion realiza la correccion
+    
+	    para usarla se usara el siguiente ejemplo, suponga que de la base de datos trae una fecha y se llama `FechaFin` y su valor al imprimirlo es el siguiente : ``2019-10-08 18:26:45.58 +0000 +0000` para corregirlo realice lo siguiente:
+  
+	    ```go
+	    FechaFin = time_bogota.TiempoCorreccionFormato(FechaFin)
+	    ```
+  
+	    esto le devolvera la fecha en el siguiente formato : `2019-10-08T18:26:45.58Z` el cual la ase de datos recibira.
 
 
 
