@@ -15,7 +15,7 @@ type Usuario struct {
 }
 
 var userMap = make(map[string]string)
-var c = cache.New(5*time.Minute, 10*time.Minute)
+var c = cache.New(60*time.Minute, 10*time.Minute)
 
 func getUserInfo2(ctx *context.Context)(u string){
 	
