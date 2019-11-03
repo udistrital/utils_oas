@@ -13,7 +13,7 @@ import (
 
 var validate *validator.Validate
 
-func FillStruct(m interface{}, s interface{}) (err error) {
+func FillStructV(m interface{}, s interface{}) (err error) {
 	validate = validator.New()
 	j, _ := json.Marshal(m)
 	err = json.Unmarshal(j, s)
@@ -23,6 +23,12 @@ func FillStruct(m interface{}, s interface{}) (err error) {
 		err = valErr
 	}
 	return
+}
+
+func FillStruct(m interface{}, s interface{}) error {
+	j, _ := json.Marshal(m)
+	err := json.Unmarshal(j, s)
+	return err
 }
 
 func FillStructP(m interface{}, s interface{}) {
