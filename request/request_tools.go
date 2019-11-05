@@ -7,10 +7,10 @@ import (
 	"time"
 	"fmt"
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/context"
+	
 )
 
-var global *context.Context
+var global string
 
 func SendJson(urlp string, trequest string, target interface{}, datajson interface{}) error {
 	b := new(bytes.Buffer)
@@ -40,9 +40,9 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 	}()
 
 	//try
-	header := GetHeader().Request.Header
+	header := GetHeader()
 	fmt.Println("header send:",header)
-	req.Header.Set("Authorization", header["Authorization"][0])
+	req.Header.Set("Authorization", header)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -72,12 +72,12 @@ func GetJsonWSO2(urlp string, target interface{}) error {
 	return json.NewDecoder(r.Body).Decode(target)
 }
 
-func SetHeader(ctx *context.Context){
-	global = ctx
+func SetHeader(h string){
+	global = h
 
 }
 
-func GetHeader()(ctx *context.Context){
+func GetHeader()(h string){
 	return global
 }
 
@@ -107,9 +107,9 @@ func GetJson(urlp string, target interface{}) error {
 		}()
 	
 		//try
-	  header := GetHeader().Request.Header
+	  header := GetHeader()
 	  fmt.Println("header get:",header)
-	  req.Header.Set("Authorization", header["Authorization"][0])
+	  req.Header.Set("Authorization", header)
 	  client := &http.Client{}
 	
 	  resp, err := client.Do(req)
