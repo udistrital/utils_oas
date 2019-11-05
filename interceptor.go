@@ -7,7 +7,7 @@ import (
 )
 
 func InterceptMidRequest(ctx *context.Context) {
-  request.SetHeader(ctx)
+  request.SetHeader(ctx.Request.Header["Authorization"][0])
 
 }
 
