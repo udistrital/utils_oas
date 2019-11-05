@@ -7,7 +7,10 @@ import (
 )
 
 func InterceptMidRequest(ctx *context.Context) {
-  request.SetHeader(ctx.Request.Header["Authorization"][0])
+  end_point := ctx.Request.URL.String()
+  if(end_point != "/"){
+    request.SetHeader(ctx.Request.Header["Authorization"][0])
+  }  
 
 }
 
