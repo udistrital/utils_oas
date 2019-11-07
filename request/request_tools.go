@@ -41,7 +41,6 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 
 	//try
 	header := GetHeader()
-	fmt.Println("header send:",header)
 	req.Header.Set("Authorization", header)
 
 	resp, err := client.Do(req)
@@ -108,7 +107,6 @@ func GetJson(urlp string, target interface{}) error {
 	
 		//try
 	  header := GetHeader()
-	  fmt.Println("header get:",header)
 	  req.Header.Set("Authorization", header)
 	  client := &http.Client{}
 	
