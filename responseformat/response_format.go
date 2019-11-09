@@ -38,7 +38,7 @@ func formatResponseObject(data interface{}, code string, status int) Response {
 
 // SetResponseFormat ... set the status format for service's response.
 func SetResponseFormat(c *beego.Controller, data interface{}, code string, status int) {
-	c.Ctx.Output.SetStatus(status)
+	c.Ctx.Output.SetStatus(200)
 
 	res := formatResponseObject(data, code, status)
 	c.Data["json"] = res
