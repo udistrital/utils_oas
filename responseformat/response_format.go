@@ -81,9 +81,8 @@ func GlobalResponseHandler(ctx *context.Context) {
 		return
 	}
 
-	beego.Error("Unknow error")
+	beego.Error(Body)
 	status = 500
-	Body = "Unknow error"
 	out = formatResponseObject(Body, "", status)
 }
 
