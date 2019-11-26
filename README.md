@@ -98,12 +98,15 @@ myproject
   package main
   import (
     "github.com/astaxie/beego"
-    "github.com/astaxie/beego/context"
+   "github.com/astaxie/beego/context"
     "github.com/udistrital/utils_oas/request"
   )
 
   func InterceptMidRequest(ctx *context.Context) {
-  request.SetHeader(ctx)
+    end_point := ctx.Request.URL.String()
+    if(end_point != "/"){
+      request.SetHeader(ctx.Request.Header["Authorization"][0])
+    }  
 
   }
 
