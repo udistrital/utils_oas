@@ -104,15 +104,15 @@ myproject
 
   func InterceptMidRequest(ctx *context.Context) {
 	   end_point := ctx.Request.URL.String()
-    if end_point != "/" {
-      defer func () {
-       //Catch
-       if r := recover(); r != nil {
-        }
-      }()
-     // try
-     request.SetHeader(ctx.Request.Header["Authorization"][0])
-   }
+	    if end_point != "/" {
+	      defer func () {
+	       //Catch
+	       if r := recover(); r != nil {
+		}
+	      }()
+	     // try
+	     request.SetHeader(ctx.Request.Header["Authorization"][0])
+	   }
 
  }
 
