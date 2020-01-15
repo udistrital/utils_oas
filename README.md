@@ -103,12 +103,18 @@ myproject
   )
 
   func InterceptMidRequest(ctx *context.Context) {
-    end_point := ctx.Request.URL.String()
-    if(end_point != "/"){
-      request.SetHeader(ctx.Request.Header["Authorization"][0])
-    }  
+	   end_point := ctx.Request.URL.String()
+	    if end_point != "/" {
+	      defer func () {
+	       //Catch
+	       if r := recover(); r != nil {
+		}
+	      }()
+	     // try
+	     request.SetHeader(ctx.Request.Header["Authorization"][0])
+	   }
 
-  }
+ }
 
   func InitInterceptor() {
     beego.InsertFilter("*", beego.BeforeExec, InterceptMidRequest, false)
