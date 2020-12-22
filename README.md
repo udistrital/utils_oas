@@ -2,37 +2,37 @@
 
 Este es un paquete de librerías y utilidades generales para las aplicaciones desarrolladas en el framework beego que hacen parte de la arquitectura API RES de la OAS:
 
-## apiStatusLib (:heavy_check_mark:)
+### apiStatusLib (:heavy_check_mark:)
 Para desplegar satisfactoriamente un api dentro de la infraestructura de la OAS, se debe crear un servicio el cual será constantemente consultado para verificar el estado de salud del mismo, esto se conoce como health check.  
 El `apiStatusLib` Proporcion un servicio en la rais de la API con estadus 200.
 
 
-## customerror (:heavy_check_mark:)
+### customerror (:heavy_check_mark:)
 La utilidad `customerror` proporciona a la estructura `beego.Controller` unas plantillas de error que retornan una estructura json en todos los servicios del API.  
 Establece adecuadamente el estatus correspondiente para cada servicio al ser una ejecución exitosa o fallida según el [código de estado HTTP](https://es.wikipedia.org/wiki/Anexo:C%C3%B3digos_de_estado_HTTP).  
 Para implementar esta utilidad se debe refactorizar el api con el siguiente programa. [refactor_controller](https://github.com/udistrital/refactor_controller)
 
-## customerrorv2 (:heavy_check_mark:)
+### customerrorv2 (:heavy_check_mark:)
 Corresponde a la versión 2 del `customerror`.  
 Se mejora la implementación del json en la respuesta de los servicios   
 Se mitiga la exposición de información confidencial en la estructura de errores.  
 
-## formatdata
+### formatdata
 Funcionalidades para la conversión y trabajo de estructuras JSON
 
-## optimize
+### optimize
 Funcionalidades de optimización con procesamiento de datos en golang
 
-## request
+### request
 Funcionalidades para el consumo de servicios JSON desde una API
 
-## ruler
+### ruler
 Funcionalidades para las reglas de negocio
 
-## security
+### security
 Funcionalidades de seguridad para aplicaciones  híbridas o legadas.
 
-## time_bogota
+### time_bogota
 <details>
   <summary><b>Implementación</b></summary>
 
