@@ -33,7 +33,7 @@ Funcionalidades para las reglas de negocio
 Funcionalidades de seguridad para aplicaciones  híbridas o legadas.
 
 ## time_bogota
-<details>
+  <details>
     <summary><b>Implementación</b></summary>
 
     importar:
