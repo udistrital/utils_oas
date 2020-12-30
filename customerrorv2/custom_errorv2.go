@@ -20,3 +20,9 @@ func (c *CustomErrorController) Error404() {
 	c.Data["json"] = outputError
 	c.ServeJSON()
 }
+
+func (c *CustomErrorController) Error502() {
+	outputError := map[string]interface{}{"Success": false, "Status": "502", "Message": c.Data["mesaage"], "Data": c.Data["data"]}
+	c.Data["json"] = outputError
+	c.ServeJSON()
+}
