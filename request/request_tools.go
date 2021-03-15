@@ -3,11 +3,11 @@ package request
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
-	"fmt"
+
 	"github.com/astaxie/beego"
-	
 )
 
 var global string
@@ -24,7 +24,7 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 	req, err := http.NewRequest(trequest, urlp, b)
 
 	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
-	defer func () {
+	defer func() {
 		//Catch
 		if r := recover(); r != nil {
 
@@ -71,53 +71,52 @@ func GetJsonWSO2(urlp string, target interface{}) error {
 	return json.NewDecoder(r.Body).Decode(target)
 }
 
-func SetHeader(h string){
+func SetHeader(h string) {
 	global = h
 
 }
 
-func GetHeader()(h string){
+func GetHeader() (h string) {
 	return global
 }
 
 func GetJson(urlp string, target interface{}) error {
-	
-	
-	req, err := http.NewRequest("GET",urlp, nil)
-	  if err != nil {
-		beego.Error("Error reading request. ", err)
-	  }
 
-	  //Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
-	
-		defer func () {
-			//Catch
-			if r := recover(); r != nil {
-	
-			  client := &http.Client{}
-			  resp, err := client.Do(req)
-			  if err != nil {
-				beego.Error("Error reading response. ", err)
-			  }
-	
-				defer resp.Body.Close()
-				json.NewDecoder(resp.Body).Decode(target)
-			}
-		}()
-	
-		//try
-	  header := GetHeader()
-	  req.Header.Set("Authorization", header)
-	  client := &http.Client{}
-	
-	  resp, err := client.Do(req)
-	  if err != nil {
-		beego.Error("Error reading response. ", err)
-	  }
-	
-		defer resp.Body.Close()
-		return json.NewDecoder(resp.Body).Decode(target)
+	req, err := http.NewRequest("GET", urlp, nil)
+	if err != nil {
+		beego.Error("Error reading request. ", err)
 	}
+
+	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
+
+	defer func() {
+		//Catch
+		if r := recover(); r != nil {
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				beego.Error("Error reading response. ", err)
+			}
+
+			defer resp.Body.Close()
+			json.NewDecoder(resp.Body).Decode(target)
+		}
+	}()
+
+	//try
+	header := GetHeader()
+	req.Header.Set("Authorization", header)
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		beego.Error("Error reading response. ", err)
+	}
+
+	defer resp.Body.Close()
+	return json.NewDecoder(resp.Body).Decode(target)
+}
 
 func GetJsonTest(url string, target interface{}) (response *http.Response, err error) {
 	var myClient = &http.Client{Timeout: 10 * time.Second}
