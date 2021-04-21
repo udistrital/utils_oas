@@ -27,6 +27,14 @@ func (c *CustomErrorController) Error500() {
 	genericError(c, "500")
 }
 
+func (c *CustomErrorController) Error501() {
+	genericError(c, "501")
+}
+
 func (c *CustomErrorController) Error502() {
 	genericError(c, "502")
+}
+
+func (c *CustomErrorController) Error509() {
+	genericError(c, "509")
 }
