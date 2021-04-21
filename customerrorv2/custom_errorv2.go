@@ -9,20 +9,32 @@ type CustomErrorController struct {
 	beego.Controller
 }
 
-func (c *CustomErrorController) Error400() {
-	outputError := map[string]interface{}{"Success": false, "Status": "400", "Message": c.Data["mesaage"], "Data": c.Data["data"]}
+func genericError(c *CustomErrorController, status string) {
+	outputError := map[string]interface{}{"Success": false, "Status": status, "Message": c.Data["mesaage"], "Data": c.Data["data"]}
 	c.Data["json"] = outputError
 	c.ServeJSON()
+}
+
+func (c *CustomErrorController) Error400() {
+	genericError(c, "400")
 }
 
 func (c *CustomErrorController) Error404() {
-	outputError := map[string]interface{}{"Success": false, "Status": "404", "Message": c.Data["mesaage"], "Data": c.Data["data"]}
-	c.Data["json"] = outputError
-	c.ServeJSON()
+	genericError(c, "404")
+}
+
+func (c *CustomErrorController) Error500() {
+	genericError(c, "500")
+}
+
+func (c *CustomErrorController) Error501() {
+	genericError(c, "501")
 }
 
 func (c *CustomErrorController) Error502() {
-	outputError := map[string]interface{}{"Success": false, "Status": "502", "Message": c.Data["mesaage"], "Data": c.Data["data"]}
-	c.Data["json"] = outputError
-	c.ServeJSON()
+	genericError(c, "502")
+}
+
+func (c *CustomErrorController) Error509() {
+	genericError(c, "509")
 }
