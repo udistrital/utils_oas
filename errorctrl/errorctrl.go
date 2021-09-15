@@ -1,4 +1,4 @@
-package helpers
+package errorctrl
 
 import (
 	"github.com/astaxie/beego"
