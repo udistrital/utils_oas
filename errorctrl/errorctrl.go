@@ -1,6 +1,9 @@
 package errorctrl
 
 import (
+	"net/http"
+	"strconv"
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 )
@@ -15,7 +18,7 @@ func ErrorControlController(c beego.Controller, controller string) {
 		if status, ok := localError["status"]; ok && status != nil {
 			c.Abort(status.(string))
 		} else {
-			c.Abort("404")
+			c.Abort(strconv.Itoa(http.StatusInternalServerError)) // Unhandled Error!
 		}
 	}
 }
