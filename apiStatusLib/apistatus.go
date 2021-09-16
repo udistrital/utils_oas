@@ -2,6 +2,7 @@ package apistatus
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
@@ -16,7 +17,7 @@ func statusResponse(status string) map[string]interface{} {
 var defaultStatusResponse map[string]interface{} = statusResponse("Ok")
 
 func formatErrorResponse(errorMsg interface{}) map[string]interface{} {
-	return statusResponse(fmt.Sprintf("ERROR: %v", errorMsg))
+	return statusResponse(fmt.Sprintf("UNHEALTHY_STATE -  %v", errorMsg))
 }
 
 // InitWithHandler accepts a (handler) function that, once performs the
@@ -25,18 +26,19 @@ func InitWithHandler(statusCheckHandler func() (statusCheckError interface{})) {
 	beego.Any("/", func(ctx *context.Context) {
 		var responseError interface{}
 
-		// "catch"
 		defer func() {
+
+			// "catch"
 			if err := recover(); err != nil {
 				responseError = err
 			}
 
+			// "finally"
 			response := defaultStatusResponse
 			if responseError != nil {
 				response = formatErrorResponse(responseError)
+				ctx.Output.SetStatus(http.StatusServiceUnavailable) // 503
 			}
-
-			// "finally"
 			ctx.Output.JSON(response, true, true)
 		}()
 
