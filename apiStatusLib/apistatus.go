@@ -6,6 +6,7 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
+	"github.com/astaxie/beego/logs"
 )
 
 func statusResponse(status string) map[string]interface{} {
@@ -16,8 +17,10 @@ func statusResponse(status string) map[string]interface{} {
 
 var defaultStatusResponse map[string]interface{} = statusResponse("Ok")
 
+const defaultErrorString string = "UNHEALTHY_STATE"
+
 func formatErrorResponse(errorMsg interface{}) map[string]interface{} {
-	return statusResponse(fmt.Sprintf("UNHEALTHY_STATE -  %v", errorMsg))
+	return statusResponse(fmt.Sprintf("%s -  %v", defaultErrorString, errorMsg))
 }
 
 // InitWithHandler accepts a (handler) function that, once performs the
@@ -36,6 +39,7 @@ func InitWithHandler(statusCheckHandler func() (statusCheckError interface{})) {
 			// "finally"
 			response := defaultStatusResponse
 			if responseError != nil {
+				logs.Critical(defaultErrorString, responseError)
 				response = formatErrorResponse(responseError)
 				ctx.Output.SetStatus(http.StatusServiceUnavailable) // 503
 			}
