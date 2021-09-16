@@ -23,12 +23,17 @@ func formatErrorResponse(errorMsg interface{}) map[string]interface{} {
 // healthcheck, returns "nil" when everything is OK.
 func InitWithHandler(statusCheckHandler func() (statusCheckError interface{})) {
 
-	response := defaultStatusResponse
+	var responseError interface{}
 
 	// "catch"
 	defer func() {
 		if err := recover(); err != nil {
-			response = formatErrorResponse(err)
+			responseError = err
+		}
+
+		response := defaultStatusResponse
+		if responseError != nil {
+			formatErrorResponse(responseError)
 		}
 
 		// "finally"
@@ -40,7 +45,7 @@ func InitWithHandler(statusCheckHandler func() (statusCheckError interface{})) {
 	// "try"
 	if statusCheckHandler != nil {
 		if err := statusCheckHandler(); err != nil {
-			response = formatErrorResponse(err)
+			responseError = err
 		}
 	}
 }
