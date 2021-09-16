@@ -22,32 +22,31 @@ func formatErrorResponse(errorMsg interface{}) map[string]interface{} {
 // InitWithHandler accepts a (handler) function that, once performs the
 // healthcheck, returns "nil" when everything is OK.
 func InitWithHandler(statusCheckHandler func() (statusCheckError interface{})) {
+	beego.Any("/", func(ctx *context.Context) {
+		var responseError interface{}
 
-	var responseError interface{}
+		// "catch"
+		defer func() {
+			if err := recover(); err != nil {
+				responseError = err
+			}
 
-	// "catch"
-	defer func() {
-		if err := recover(); err != nil {
-			responseError = err
-		}
+			response := defaultStatusResponse
+			if responseError != nil {
+				response = formatErrorResponse(responseError)
+			}
 
-		response := defaultStatusResponse
-		if responseError != nil {
-			formatErrorResponse(responseError)
-		}
-
-		// "finally"
-		beego.Any("/", func(ctx *context.Context) {
+			// "finally"
 			ctx.Output.JSON(response, true, true)
-		})
-	}()
+		}()
 
-	// "try"
-	if statusCheckHandler != nil {
-		if err := statusCheckHandler(); err != nil {
-			responseError = err
+		// "try"
+		if statusCheckHandler != nil {
+			if err := statusCheckHandler(); err != nil {
+				responseError = err
+			}
 		}
-	}
+	})
 }
 
 func Init() {
