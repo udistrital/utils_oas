@@ -9,6 +9,12 @@ import (
 	"github.com/astaxie/beego/logs"
 )
 
+var checkCount uint
+
+func clearCheck() {
+	checkCount = 0
+}
+
 func statusResponse(status string) map[string]interface{} {
 	return map[string]interface{}{
 		"Status": status,
@@ -26,6 +32,7 @@ func formatErrorResponse(errorMsg interface{}) map[string]interface{} {
 // InitWithHandler accepts a (handler) function that, once performs the
 // healthcheck, returns "nil" when everything is OK.
 func InitWithHandler(statusCheckHandler func() (statusCheckError interface{})) {
+	clearCheck()
 	beego.Any("/", func(ctx *context.Context) {
 		var responseError interface{}
 
@@ -39,11 +46,19 @@ func InitWithHandler(statusCheckHandler func() (statusCheckError interface{})) {
 			// "finally"
 			response := defaultStatusResponse
 			if responseError != nil {
+				clearCheck()
 				logs.Critical(defaultErrorString, responseError)
 				response = formatErrorResponse(responseError)
 				ctx.Output.SetStatus(http.StatusServiceUnavailable) // 503
 			}
+			response["checkCount"] = checkCount
 			ctx.Output.JSON(response, true, true)
+			restart := ""
+			if checkCount == 0 {
+				restart = "- WARNING: APP_JUST_STARTED (please compare against the previous logged checkCount value to dismiss uint overflow)"
+			}
+			logs.Info("checkCount:", checkCount, restart)
+			checkCount++
 		}()
 
 		// "try"
