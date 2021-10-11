@@ -126,6 +126,34 @@ importar:
 
 </details>
 
+## Desarrollo
+
+Teniendo en cuenta que este paquete es de utilidades, es de esperar
+que en vez se trabajarse por aparte, se valide con otra aplicación que `import`e
+este paquete. *Asumiendo
+que los siguientes comandos se ejecutan desde una aplicación que
+importa este paquete, por ejemplo, desde configuracion_crud*; Se propone el siguiente flujo de desarrollo:
+
+```bash
+# 1. Desde el repositorio que importe esta librería, ej, configuracion_crud
+# Indicarle al go.mod que reemplace utils_oas con una version local
+go mod edit -replace github.com/udistrital/utils_oas=../utils_oas
+
+# 2. Sincronizar los go.mod/sum - Al ser un reemplazo temporal, deberá ignorarse
+# mas adelante en el commit, ojo!
+go mod tidy
+
+# ------- Hacer pruebas y ajustes necesarios en ambos repositorios -----------
+
+# 3. Una vez finalizadas las pruebas, abrir un PR en utils_oas
+# Y DESCARTAR LOS CAMBIOS A LOS go.mod/sum derivados de 1. y 2.:
+git checkout go.mod go.sum
+
+# 4. Una vez aprobado el PR en utils_oas, lo único que resta es actualizar
+# la versión importada en el/los repos que importen utils_oas, simplemente con
+go get -u github.com/udistrital/utils_oas
+```
+
 ## Licencia
 
 This file is part of utils_oas.
