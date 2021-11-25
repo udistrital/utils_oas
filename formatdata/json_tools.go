@@ -15,8 +15,7 @@ var validate *validator.Validate
 
 func FillStructV(m interface{}, s interface{}) (err error) {
 	validate = validator.New()
-	j, _ := json.Marshal(m)
-	err = json.Unmarshal(j, s)
+	err = FillStruct(m, &s)
 	valErr := validate.Struct(s)
 
 	if valErr != nil {
@@ -26,9 +25,7 @@ func FillStructV(m interface{}, s interface{}) (err error) {
 }
 
 func FillStructP(m interface{}, s interface{}) {
-	j, _ := json.Marshal(m)
-	err := json.Unmarshal(j, s)
-	if err != nil {
+	if err := FillStruct(m, &s); err != nil {
 		panic(err.Error())
 	}
 }
@@ -105,8 +102,7 @@ func FillStructDeep(m map[string]interface{}, fields string, s interface{}) (err
 			//fmt.Println(aux[value])
 		}
 	}
-	j, _ := json.Marshal(load)
-	err = json.Unmarshal(j, s)
+	err = FillStruct(load, &s)
 	return
 }
 
