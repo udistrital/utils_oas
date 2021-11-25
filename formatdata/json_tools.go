@@ -25,12 +25,6 @@ func FillStructV(m interface{}, s interface{}) (err error) {
 	return
 }
 
-func FillStruct(m interface{}, s interface{}) error {
-	j, _ := json.Marshal(m)
-	err := json.Unmarshal(j, s)
-	return err
-}
-
 func FillStructP(m interface{}, s interface{}) {
 	j, _ := json.Marshal(m)
 	err := json.Unmarshal(j, s)
