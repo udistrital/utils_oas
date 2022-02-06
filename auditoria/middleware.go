@@ -62,10 +62,10 @@ func ListenRequest(ctx *context.Context) {
 	var date string      //Fecha y hora de la operación
 
 	/*---- Información relacionada con el usuario ---- */
-	var ip_user string      //IP del usuario   <----- pendiente
-	var access_token string //Access token asignado al usuario que realiza peticion
-	var user_agent string   //Tipo de aplicación, sistema operativo, provedor del software o laversión del software de la petición del agente de usuario
-	var user string         //Nombre de usuario en WSO2 que realiza la petición    <----- pendiente
+	var ip_user string    //IP del usuario   <----- pendiente
+	var user_agent string //Tipo de aplicación, sistema operativo, provedor del software o laversión del software de la petición del agente de usuario
+	var user string       //Nombre de usuario en WSO2 que realiza la petición    <----- pendiente
+	// var access_token string //Access token asignado al usuario que realiza peticion
 
 	/*---- Información relacionada con el cuerpo de la petición ---- */
 	var data_response interface{} //Payload del servicio
@@ -89,7 +89,7 @@ func ListenRequest(ctx *context.Context) {
 			//Catch
 			if r := recover(); r != nil {
 
-				access_token = "NO WSO2"
+				// access_token = "NO WSO2"
 				user = "NO WSO2 - No user"
 				var log = fmt.Sprintf(`@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host, end_point, method, date, ip_user, user_agent, user, data_response)
 				if end_point != "/" {
@@ -100,12 +100,12 @@ func ListenRequest(ctx *context.Context) {
 		}()
 
 		// try
-		access_token = ctx.Request.Header["Authorization"][0]
+		// access_token = ctx.Request.Header["Authorization"][0]
 
 		/*---- Obtención del usuario ---- */
 		defer func() {
 			if r := recover(); r != nil {
-				access_token = "Error WSO2"
+				// access_token = "Error WSO2"
 				user = "Error wso2"
 				var log = fmt.Sprintf(`@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@&%s@$`, app_name, host, end_point, method, date, ip_user, user_agent, user, data_response)
 				if end_point != "/" {
