@@ -82,7 +82,7 @@ myproject
 ```
 
 4. Copiar en él el mismo contenido disponible en
-[Interceptor](https://github.com/udistrital/auditoria/blob/dev/interceptor.go). Este archivo debe lucir así:
+[Interceptor](interceptor.go). Este archivo debe lucir así:
 
 ```go
   package main
