@@ -53,11 +53,10 @@ func InitWithHandler(statusCheckHandler func() (statusCheckError interface{})) {
 			}
 			response["checkCount"] = checkCount
 			ctx.Output.JSON(response, true, true)
-			restart := ""
 			if checkCount == 0 {
-				restart = "- WARNING: APP_JUST_STARTED (please compare against the previous logged checkCount value to dismiss uint overflow)"
+				logs.Warn("APP_JUST_STARTED (please compare against the previous logged checkCount value to dismiss uint overflow)")
 			}
-			logs.Info("checkCount:", checkCount, restart)
+			logs.Debug("checkCount:", checkCount)
 			checkCount++
 		}()
 
