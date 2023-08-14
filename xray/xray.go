@@ -16,6 +16,8 @@ import (
 
 var globalContext context.Context
 var SegmentName string
+var StatusCode int
+var Seg *xray.Segment
 
 func InitXRay(segmentName string) error {
 	os.Setenv("AWS_XRAY_NOOP_ID", "false")
@@ -25,9 +27,10 @@ func InitXRay(segmentName string) error {
 	}
 
 	xray.Configure(xray.Config{
-		DaemonAddr: "127.0.0.1:2000", // Dirección y puerto del demonio de X-Ray local
-		LogLevel:   "info",           // Nivel de log deseado
-		LogFormat:  "json",           // Formato de log deseado (text o json)
+		DaemonAddr: "ec2-54-162-219-111.compute-1.amazonaws.com:2000", // Dirección y puerto del demonio de X-Ray local
+		//DaemonAddr: "127.0.0.1:2000",
+		LogLevel:  "info", // Nivel de log deseado
+		LogFormat: "json", // Formato de log deseado (text o json)
 	})
 
 	// S3 and ECS Clients
@@ -41,16 +44,63 @@ func InitXRay(segmentName string) error {
 	fmt.Println("Listed buckets successfully")
 	SegmentName = segmentName
 	beego.InsertFilter("*", beego.BeforeExec, BeginSegment)
-
+	beego.InsertFilter("*", beego.AfterExec, EndSegment, false)
+	//beego.BConfig.RecoverFunc = MyRecover
 	return nil
 }
 
+/*func MyRecover(ctx *context2.Context) {
+	if err := recover(); err != nil {
+
+		fmt.Println("Segment final Recover --", err)
+
+		fmt.Println("Segment final Recover2 --", err)
+		fmt.Println("Status Code2 --", StatusCode)
+		Seg.HTTP = &xray.HTTPData{
+			Request: &xray.RequestData{
+				Method: ctx.Request.Method,
+				URL:    ctx.Request.URL.String(),
+			},
+			Response: &xray.ResponseData{
+				Status: StatusCode,
+			},
+		}
+		Seg.Close(nil)
+	}
+}*/
+
 func BeginSegment(ctx *context2.Context) {
 	ctx2 := ctx.Request.Context()
-	ctx2, seg := BeginSegmentWithContextTP(ctx2, SegmentName, ctx.Request.Method, ctx.Request.URL.String(), 200, ctx.Request.URL.String(), ctx.Request.Header.Values("X-Amzn-Trace-Id"))
-	defer seg.Close(nil)
+	ctx2, seg := BeginSegmentWithContextTP(ctx2, SegmentName, ctx.Request.Method, ctx.Request.URL.String(), StatusCode, ctx.Request.URL.String(), ctx.Request.Header.Values("X-Amzn-Trace-Id"))
+	Seg = seg
 	SetContext(ctx2)
 	ctx.Input.SetData("XRaySegment", seg)
+}
+
+func EndSegment(ctx *context2.Context) {
+	Seg.HTTP = &xray.HTTPData{
+		Request: &xray.RequestData{
+			Method: ctx.Request.Method,
+			URL:    ctx.Request.URL.String(),
+		},
+		Response: &xray.ResponseData{
+			Status: StatusCode,
+		},
+	}
+	Seg.Close(nil)
+}
+
+func EndSegmentErr(Method, URL string) {
+	Seg.HTTP = &xray.HTTPData{
+		Request: &xray.RequestData{
+			Method: Method,
+			URL:    URL,
+		},
+		Response: &xray.ResponseData{
+			Status: StatusCode,
+		},
+	}
+	Seg.Close(nil)
 }
 
 func BeginSegmentWithContextTP(ctx context.Context, segmentName string, method string, url string, code int, origin string, traceID []string) (context.Context, *xray.Segment) {
@@ -114,4 +164,12 @@ func GetContext() context.Context {
 
 func SetContext(ctx context.Context) {
 	globalContext = ctx
+}
+
+func GetStatusCode() int {
+	return StatusCode
+}
+
+func SetStatusCode(statusCode int) {
+	StatusCode = statusCode
 }
