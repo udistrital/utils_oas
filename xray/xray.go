@@ -29,10 +29,10 @@ func InitXRay(segmentName string) error {
 	}
 
 	xray.Configure(xray.Config{
-		//DaemonAddr: "ec2-54-162-219-111.compute-1.amazonaws.com:2000", // Dirección y puerto del demonio de X-Ray local
-		DaemonAddr: "127.0.0.1:2000",
-		LogLevel:   "info", // Nivel de log deseado
-		LogFormat:  "json", // Formato de log deseado (text o json)
+		DaemonAddr: "ec2-54-162-219-111.compute-1.amazonaws.com:2000", // Dirección y puerto del demonio de X-Ray local
+		//DaemonAddr: "127.0.0.1:2000",
+		LogLevel:  "info", // Nivel de log deseado
+		LogFormat: "json", // Formato de log deseado (text o json)
 	})
 
 	// S3 and ECS Clients
