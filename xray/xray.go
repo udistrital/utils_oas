@@ -40,10 +40,10 @@ func InitXRay() error {
 	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
 	//Configuración de X-Ray
 	xray.Configure(xray.Config{
-		//DaemonAddr: "ec2-3-87-139-174.compute-1.amazonaws.com:2000", // Dirección y puerto del demonio de X-Ray local
-		DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio
-		LogLevel:   "debug",          // Nivel de log deseado
-		LogFormat:  "json",           // Formato de log deseado (text o json)
+		DaemonAddr: "ec2-3-87-139-174.compute-1.amazonaws.com:2000", // Dirección y puerto del demonio de X-Ray local
+		//DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio
+		LogLevel:  "debug", // Nivel de log deseado
+		LogFormat: "json",  // Formato de log deseado (text o json)
 	})
 	// Crea cllientes para S3 Y ECS
 	ecrClient := ecr.New(XraySess)
