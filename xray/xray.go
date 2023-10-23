@@ -24,6 +24,7 @@ var Seg *xray.Segment
 var URL string
 var Method string
 var Controller string
+var capturar bool
 
 // InitXRay inicializa la configuración de X-Ray y configura los clientes necesarios.
 // Devuelve un error si ocurre algún error durante la inicialización.
@@ -40,7 +41,7 @@ func InitXRay() error {
 	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
 	//Configuración de X-Ray
 	xray.Configure(xray.Config{
-		DaemonAddr: "ec2-3-87-139-174.compute-1.amazonaws.com:2000", // Dirección y puerto del demonio de X-Ray local
+		DaemonAddr: "ec2-3-81-69-43.compute-1.amazonaws.com:2000", // Dirección y puerto del demonio de X-Ray local
 		//DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio
 		LogLevel:  "debug", // Nivel de log deseado
 		LogFormat: "json",  // Formato de log deseado (text o json)
@@ -74,6 +75,11 @@ func InitXRay() error {
 // - GlobalContext: Inicialización de un contexto vacío para almacenar los segmentos que se generen.
 // - Seg: Segmento principal de la Traza.
 func BeginSegment(ctx *context2.Context) {
+	if ctx.Input.Context.Request.URL.String() == "/" {
+		capturar = false
+	} else {
+		capturar = true
+	}
 	SegmentName = ctx.Input.Context.Request.Host
 	URL = "http://" + SegmentName + ctx.Input.Context.Request.URL.String()
 	Method = ctx.Request.Method
@@ -223,6 +229,9 @@ func EndSegmentErr(status int, err interface{}) {
 // - seg: puntero al segmento principal recién creado.
 func BeginSegmentWithContextTP(code int, traceID []string, ctx *context2.Context) *xray.Segment {
 	ctx2, seg := xray.BeginSegment(GlobalContext, SegmentName)
+	if capturar == false {
+		seg.Sampled = false
+	}
 	GlobalContext = ctx2
 	seg.Origin = URL
 	seg.HTTP = &xray.HTTPData{
