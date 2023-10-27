@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-xray-sdk-go/xray"
-	"github.com/aws/aws-xray-sdk-go/xraylog"
+	//"github.com/aws/aws-xray-sdk-go/xraylog"
 )
 
 var GlobalContext context.Context
@@ -38,7 +38,7 @@ func InitXRay() error {
 		return err
 	}
 	//Activación de logs y modo Debug
-	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
+	//xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
 	//Configuración de X-Ray
 	xray.Configure(xray.Config{
 		DaemonAddr: "ec2-3-81-69-43.compute-1.amazonaws.com:2000", // Dirección y puerto del demonio de X-Ray local
