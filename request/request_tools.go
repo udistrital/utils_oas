@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/astaxie/beego"
+	"github.com/udistrital/utils_oas/xray"
 )
 
 var global string
@@ -22,7 +23,6 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 
 	client := &http.Client{}
 	req, err := http.NewRequest(trequest, urlp, b)
-
 	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
 	defer func() {
 		//Catch
@@ -42,8 +42,9 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 	//try
 	header := GetHeader()
 	req.Header.Set("Authorization", header)
-
+	seg := xray.BeginSegmentSec(req)
 	resp, err := client.Do(req)
+	xray.UpdateSegment(resp, err, seg)
 	if err != nil {
 		beego.Error("Error reading response. ", err)
 	}
@@ -59,7 +60,9 @@ func GetJsonWSO2(urlp string, target interface{}) error {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", urlp, b)
 	req.Header.Set("Accept", "application/json")
+	seg := xray.BeginSegmentSec(req)
 	r, err := client.Do(req)
+	xray.UpdateSegment(r, err, seg)
 	//r, err := http.Post(url, "application/json; charset=utf-8", b)
 	if err != nil {
 		fmt.Println("error", err)
@@ -103,13 +106,13 @@ func GetJson(urlp string, target interface{}) error {
 			json.NewDecoder(resp.Body).Decode(target)
 		}
 	}()
-
 	//try
 	header := GetHeader()
 	req.Header.Set("Authorization", header)
 	client := &http.Client{}
-
+	seg := xray.BeginSegmentSec(req)
 	resp, err := client.Do(req)
+	xray.UpdateSegment(resp, err, seg)
 	if err != nil {
 		beego.Error("Error reading response. ", err)
 	}
