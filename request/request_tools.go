@@ -53,6 +53,48 @@ func SendJson(urlp string, trequest string, target interface{}, datajson interfa
 	return json.NewDecoder(resp.Body).Decode(target)
 }
 
+func SendJsonEscapeUnicode(urlp string, trequest string, target interface{}, datajson interface{}) error {
+	b := new(bytes.Buffer)
+	if datajson != nil {
+		e := json.NewEncoder(b)
+		e.SetEscapeHTML(false)
+		e.Encode(datajson)
+	}
+	//proxyUrl, err := url.Parse("http://10.20.4.15:3128")
+	//http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
+
+	client := &http.Client{}
+	req, err := http.NewRequest(trequest, urlp, b)
+	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
+	defer func() {
+		//Catch
+		if r := recover(); r != nil {
+
+			client := &http.Client{}
+			resp, err := client.Do(req)
+			if err != nil {
+				beego.Error("Error reading response. ", err)
+			}
+
+			defer resp.Body.Close()
+			json.NewDecoder(resp.Body).Decode(target)
+		}
+	}()
+
+	//try
+	header := GetHeader()
+	req.Header.Set("Authorization", header)
+	seg := xray.BeginSegmentSec(req)
+	resp, err := client.Do(req)
+	xray.UpdateSegment(resp, err, seg)
+	if err != nil {
+		beego.Error("Error reading response. ", err)
+	}
+
+	defer resp.Body.Close()
+	return json.NewDecoder(resp.Body).Decode(target)
+}
+
 func GetJsonWSO2(urlp string, target interface{}) error {
 	b := new(bytes.Buffer)
 	//proxyUrl, err := url.Parse("http://10.20.4.15:3128")
