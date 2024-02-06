@@ -18,15 +18,19 @@ type APIResponse struct {
 //   - success: proceso exitoso (true) o fallido  (false)
 //   - statusCode: Códigos de estado de respuesta HTTP
 //   - data: información principal a entregar
-//   - customMessage: mensaje informativo de estado de respuesta
+//   - customMessage: mensaje informativo de estado de respuesta (variádica: acepta n messages o incluso ninguno)
 //
 // Retorna:
 //   - respuesta formateada
-func APIResponseDTO(success bool, statusCode int, data interface{}, customMessage interface{}) APIResponse {
+func APIResponseDTO(success bool, statusCode int, data interface{}, customMessage ...interface{}) APIResponse {
 	var message interface{}
 
-	if customMessage == nil {
-		message = customMessage
+	if len(customMessage) > 0 {
+		if len(customMessage) == 1 {
+			message = customMessage[0]
+		} else {
+			message = customMessage
+		}
 	} else {
 		message = getHttpStatusMessage(success, statusCode)
 	}
