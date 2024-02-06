@@ -10,7 +10,7 @@ import (
 type APIResponse struct {
 	Success bool        `json:"success"`
 	Status  int         `json:"status"`
-	Message string      `json:"message"`
+	Message interface{} `json:"message"`
 	Data    interface{} `json:"data"`
 }
 
@@ -22,11 +22,11 @@ type APIResponse struct {
 //
 // Retorna:
 //   - respuesta formateada
-func APIResponseDTO(success bool, statusCode int, data interface{}, customMessage ...string) APIResponse {
-	var message string
+func APIResponseDTO(success bool, statusCode int, data interface{}, customMessage interface{}) APIResponse {
+	var message interface{}
 
-	if len(customMessage) > 0 {
-		message = customMessage[0]
+	if customMessage == nil {
+		message = customMessage
 	} else {
 		message = getHttpStatusMessage(success, statusCode)
 	}
