@@ -3,6 +3,7 @@ package xray
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,9 +11,11 @@ import (
 
 	"github.com/astaxie/beego"
 	context2 "github.com/astaxie/beego/context"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-xray-sdk-go/xray"
 	//"github.com/aws/aws-xray-sdk-go/xraylog"
 )
@@ -40,12 +43,21 @@ func InitXRay() error {
 	//Activación de logs y modo Debug
 	//xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
 	//Configuración de X-Ray
+
+	//función para obtener la dirección del demonio en EC2 del parameter store en AWS.
+	daemonaddr, err2 := setupEnvironment()
+	if err2 != nil {
+		log.Fatal("Error configurando el entorno:", err)
+	}
+
+	// Configuración X-Ray
 	xray.Configure(xray.Config{
-		DaemonAddr: "ec2-3-81-69-43.compute-1.amazonaws.com:2000", // Dirección y puerto del demonio de X-Ray local
-		//DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio
+		DaemonAddr: daemonaddr, // Dirección del demonio de X-Ray
+		//DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio en local
 		LogLevel:  "debug", // Nivel de log deseado
 		LogFormat: "json",  // Formato de log deseado (text o json)
 	})
+
 	// Crea cllientes para S3 Y ECS
 	ecrClient := ecr.New(XraySess)
 	ecsClient := ecs.New(XraySess)
@@ -60,6 +72,37 @@ func InitXRay() error {
 	beego.InsertFilter("*", beego.BeforeExec, BeginSegment)
 	beego.InsertFilter("*", beego.AfterExec, EndSegment, false)
 	return nil
+}
+
+// setupEnvironment configura el entorno para la aplicación.
+// Crea una sesión con AWS, obtiene valores desde Parameter Store,
+// y configura las variables de entorno locales.
+// Retorna el valor de DAEMON_ADDR si tiene éxito, de lo contrario, un error.
+func setupEnvironment() (string, error) {
+	// Crea una sesión de AWS
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{Region: aws.String("us-east-1"),
+			CredentialsChainVerboseErrors: aws.Bool(true)},
+		Profile: "default",
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Crea un cliente de AWS Parameter Store
+	ssmClient := ssm.New(sess, aws.NewConfig().WithRegion("us-east-1"))
+
+	// Lee los valores desde Parameter Store
+	resultDaemon, err := ssmClient.GetParameter(&ssm.GetParameterInput{
+		Name:           aws.String("/prepod/utils_oas/xray/DaemonAddr"),
+		WithDecryption: aws.Bool(true), // Desencripta el valor si está cifrado
+	})
+	if err != nil {
+		return "", err
+	}
+	// Configura las variables de entorno locales
+	os.Setenv("DAEMON_ADDR", *resultDaemon.Parameter.Value)
+	return *resultDaemon.Parameter.Value, nil
 }
 
 // Función que Crea el segmento principal asociado a la API, tomando en cuenta si
