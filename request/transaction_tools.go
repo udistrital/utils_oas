@@ -272,7 +272,6 @@ func Iguales(a interface{}, b interface{}) bool {
 }
 
 func LimpiezaRespuestaRefactor(respuesta map[string]interface{}, v interface{}) {
-	fmt.Println("---------Entrada 2--------")
 	b, err := json.Marshal(respuesta["Data"])
 	if err != nil {
 		panic(err)
@@ -321,7 +320,7 @@ func Roundf(x float64) float64 {
 	return t
 }
 
-func contains(s []string, str string) bool {
+func Contains(s []string, str string) bool {
 	for _, v := range s {
 		if v == str {
 			return true
