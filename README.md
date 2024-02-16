@@ -18,7 +18,7 @@ Para implementar esta utilidad se debe refactorizar el api con el siguiente prog
 ### customerrorv2 (:heavy_check_mark:)
 
 Corresponde a la versión 2 del `customerror`.
-Se mejora la implementación del json en la respuesta de los servicios
+Se mejora la implementación del json en la respuesta de los servicios.
 Se mitiga la exposición de información confidencial en la estructura de errores.
 
 ### formatdata
