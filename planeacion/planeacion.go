@@ -2,6 +2,7 @@ package planeacion
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -94,4 +95,37 @@ func formatNumberString(x string, precision int, thousand string, decimal string
 	}
 
 	return result + extra
+}
+
+func ConvertirStringJson(diccionario map[string]interface{}) map[string]interface{} {
+	diccionarioStrings := map[string]interface{}{}
+
+	for clave, valor := range diccionario {
+		jsonBytes, _ := json.Marshal(valor)
+		if string(jsonBytes) == "null" {
+			diccionarioStrings[clave] = "{}"
+		} else if clave == "_id" || clave == "fecha_creacion" {
+			diccionarioStrings[clave] = valor
+		} else {
+			diccionarioStrings[clave] = string(jsonBytes)
+		}
+	}
+	return diccionarioStrings
+}
+
+func ConvertirJsonString(diccionario map[string]interface{}) map[string]interface{} {
+	diccionarioStrings := map[string]interface{}{}
+
+	for clave, valor := range diccionario {
+		jsonBytes, _ := json.Marshal(valor)
+		if string(jsonBytes) == "null" {
+			diccionarioStrings[clave] = "{}"
+		} else if clave == "_id" || clave == "fecha_creacion" {
+			diccionarioStrings[clave] = valor
+		} else {
+			diccionarioStrings[clave] = string(jsonBytes)
+		}
+	}
+
+	return diccionarioStrings
 }
