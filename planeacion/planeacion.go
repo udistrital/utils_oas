@@ -129,3 +129,12 @@ func ConvertirJsonString(diccionario map[string]interface{}) map[string]interfac
 
 	return diccionarioStrings
 }
+
+// Retorna un map[string]interface{} a raíz de un string que tenga el json detro de comillas dobles(")
+func StringAJson(valor string) map[string]interface{} {
+	var resultado map[string]interface{}
+	texto := strings.Replace(valor, "\\", "", -1)
+	texto = texto[1 : len(texto)-1]
+	json.Unmarshal([]byte(texto), &resultado)
+	return resultado
+}
