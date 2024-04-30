@@ -8,10 +8,10 @@ import (
 )
 
 type APIResponse struct {
-	Success bool        `json:"success"`
-	Status  int         `json:"status"`
-	Message interface{} `json:"message"`
-	Data    interface{} `json:"data"`
+	Success bool        `json:"Success"`
+	Status  int         `json:"Status"`
+	Message interface{} `json:"Message"`
+	Data    interface{} `json:"Data"`
 }
 
 // Formato de respuesta generalizado para entrega de respuesta de MID
