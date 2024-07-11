@@ -241,3 +241,37 @@ func ParseResponseFormato1(resp interface{}) (interface{}, error) {
 
 	return expRespV1.Data, nil
 }
+
+type expectedResponseFormato2 struct {
+	Success bool        `json:"Success"`
+	Status  int16       `json:"Status"`
+	Message string      `json:"Message"`
+	Data    interface{} `json:"Data"`
+}
+
+// Formatea respuesta de api con formato; verifica el status y que haya información
+//   - dataIs: data de cualquier tipo de formato
+//
+// Retorna:
+//   - data si existe o no si es array vacío
+//   - error si existe
+func ParseResponseFormato2(resp interface{}) (interface{}, error) {
+	// ? se prepara y convierte la respuesta en una estructura esperada
+	expRespV1 := expectedResponseFormato2{}
+	jsonString, err := json.Marshal(resp)
+	if err != nil {
+		return expRespV1, err
+	}
+	json.Unmarshal(jsonString, &expRespV1)
+	// ? se corrobora nuevamente el estatus de la respuesta, por si las dudas (ha pasado que la petición retorna ok con Success false)
+	if expRespV1.Status < 200 || expRespV1.Status > 299 || !expRespV1.Success {
+		return expRespV1, fmt.Errorf("not successful response")
+	}
+	// ? checkeo si hay data, en querys puede retornar array vacío
+	_, err = ParseResonseNoFormat(expRespV1.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	return expRespV1.Data, nil
+}
