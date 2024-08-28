@@ -43,6 +43,45 @@ func APIResponseDTO(success bool, statusCode int, data interface{}, customMessag
 	}
 }
 
+type APIResponseMeta struct {
+	Success  bool        `json:"Success"`
+	Status   int         `json:"Status"`
+	Message  interface{} `json:"Message"`
+	Data     interface{} `json:"Data"`
+	Metadata interface{} `json:"Metadata"`
+}
+
+// Formato de respuesta generalizado para entrega de respuesta de MID
+//   - success: proceso exitoso (true) o fallido  (false)
+//   - statusCode: Códigos de estado de respuesta HTTP
+//   - data: información principal a entregar
+//   - metadata: informacion adicional a la informacion principal a entregar
+//   - customMessage: mensaje informativo de estado de respuesta (variádica: acepta n messages o incluso ninguno)
+//
+// Retorna:
+//   - respuesta formateada
+func APIResponseMetadataDTO(success bool, statusCode int, data interface{}, metadata interface{}, customMessage ...interface{}) APIResponseMeta {
+	var message interface{}
+
+	if len(customMessage) > 0 {
+		if len(customMessage) == 1 {
+			message = customMessage[0]
+		} else {
+			message = customMessage
+		}
+	} else {
+		message = getHttpStatusMessage(success, statusCode)
+	}
+
+	return APIResponseMeta{
+		Success:  success,
+		Status:   statusCode,
+		Message:  message,
+		Data:     data,
+		Metadata: metadata,
+	}
+}
+
 func getHttpStatusMessage(success bool, statusCode int) string {
 	switch statusCode {
 	case http.StatusContinue: // 100
