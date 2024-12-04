@@ -7,6 +7,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	"github.com/patrickmn/go-cache"
+	"encoding/json"
 )
 
 type Usuario struct {
@@ -50,27 +51,27 @@ func getUserInfo(ctx *context.Context) (u string) {
 	}
 }
 
-func ListenRequest(ctx *context.Context) {
+/*func ListenRequest(ctx *context.Context) {
 
-	/*---- Declaración de variables ---- */
+	/*---- Declaración de variables ---- 
 
-	/*---- Información relacionada a la aplicación y la petición ---- */
+	/*---- Información relacionada a la aplicación y la petición ---- 
 	var app_name string  //Nombre del API al que se le hace la petición
 	var host string      //Host del API
 	var end_point string //End point al que se le realiza la petición
 	var method string    //Método REST de la petición
 	var date string      //Fecha y hora de la operación
 
-	/*---- Información relacionada con el usuario ---- */
+	/*---- Información relacionada con el usuario ---- 
 	var ip_user string    //IP del usuario   <----- pendiente
 	var user_agent string //Tipo de aplicación, sistema operativo, provedor del software o laversión del software de la petición del agente de usuario
 	var user string       //Nombre de usuario en WSO2 que realiza la petición    <----- pendiente
 	// var access_token string //Access token asignado al usuario que realiza peticion
 
-	/*---- Información relacionada con el cuerpo de la petición ---- */
+	/*---- Información relacionada con el cuerpo de la petición ---- 
 	var data_response interface{} //Payload del servicio
 
-	/*---- Asignación de variables ----*/
+	/*---- Asignación de variables ----
 	app_name = beego.AppConfig.String("appname")
 	host = ctx.Request.Host
 	end_point = ctx.Request.URL.String()
@@ -104,7 +105,7 @@ func ListenRequest(ctx *context.Context) {
 		// try
 		// access_token = ctx.Request.Header["Authorization"][0]
 
-		/*---- Obtención del usuario ---- */
+		/*---- Obtención del usuario ---- 
 		defer func() {
 			if r := recover(); r != nil {
 				// access_token = "Error WSO2"
@@ -122,8 +123,80 @@ func ListenRequest(ctx *context.Context) {
 			beego.Info(log)
 		}
 	}()
+}*/
+
+
+func ListenRequest(ctx *context.Context) {
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logData := map[string]interface{}{
+					"app_name":   beego.AppConfig.String("appname"),
+					"host":       ctx.Request.Host,
+					"end_point":  ctx.Request.URL.String(),
+					"method":     ctx.Request.Method,
+					"date":       time.Now().Format(time.RFC3339),
+					"ip_user":    ctx.Input.IP(),
+					"user_agent": getUserAgent(ctx),
+					"user":       "Error WSO2",
+					"data":       sanitizeInputData(ctx.Input.Data()),
+				}
+				logAsJSON(logData)
+			}
+		}()
+
+		user := getUserInfo(ctx)
+
+		logData := map[string]interface{}{
+			"app_name":   beego.AppConfig.String("appname"),
+			"host":       ctx.Request.Host,
+			"end_point":  ctx.Request.URL.String(),
+			"method":     ctx.Request.Method,
+			"date":       time.Now().Format(time.RFC3339),
+			"ip_user":    ctx.Input.IP(),
+			"user_agent": getUserAgent(ctx),
+			"user":       user,
+			"data":       sanitizeInputData(ctx.Input.Data()),
+		}
+
+		logAsJSON(logData)
+	}()
 }
 
+// Serializar los logs a JSON y registrarlos
+func logAsJSON(data map[string]interface{}) {
+	jsonLog, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		beego.Error("Error al serializar el log a JSON:", err)
+	} else {
+		beego.Info(string(jsonLog))
+	}
+}
+
+// Sanitizar el input para evitar tipos no soportados
+func sanitizeInputData(input interface{}) interface{} {
+	if data, ok := input.(map[interface{}]interface{}); ok {
+		converted := make(map[string]interface{})
+		for key, value := range data {
+			converted[fmt.Sprintf("%v", key)] = value
+		}
+		return converted
+	}
+	return input
+}
+
+// Obtener el User-Agent de forma segura
+func getUserAgent(ctx *context.Context) string {
+	if len(ctx.Request.Header["User-Agent"]) > 0 {
+		return ctx.Request.Header["User-Agent"][0]
+	}
+	return "Desconocido"
+}
+
+
+
+
 func InitMiddleware() {
+	fmt.Println("Middleware inicializado correctamente.")
 	beego.InsertFilter("*", beego.AfterExec, ListenRequest, false)
 }
