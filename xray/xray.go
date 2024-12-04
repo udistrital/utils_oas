@@ -44,14 +44,14 @@ func InitXRay() error {
 	//Configuración de X-Ray
 
 	//función para obtener la dirección del demonio en EC2 del parameter store en AWS.
-	/*daemonaddr, err2 := setupEnvironment()
+	daemonaddr, err2 := setupEnvironment()
 	if err2 != nil {
 		log.Fatal("Error configurando el entorno:", err)
-	}*/
+	}
 
 	// Configuración X-Ray
 	xray.Configure(xray.Config{
-		DaemonAddr: "3.81.69.43:2000", // Dirección del demonio de X-Ray
+		//DaemonAddr: "3.81.69.43:2000", // Dirección del demonio de X-Ray
 		//DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio en local
 		LogLevel:  "debug", // Nivel de log deseado
 		LogFormat: "json",  // Formato de log deseado (text o json)
