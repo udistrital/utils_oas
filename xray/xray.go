@@ -51,6 +51,7 @@ func InitXRay() error {
 
 	// Configuración X-Ray
 	xray.Configure(xray.Config{
+		DaemonAddr: daemonaddr, // Dirección dinamica del demonio de X-ray 
 		//DaemonAddr: "3.81.69.43:2000", // Dirección del demonio de X-Ray
 		//DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio en local
 		LogLevel:  "debug", // Nivel de log deseado
@@ -100,7 +101,7 @@ func setupEnvironment() (string, error) {
 		return "", err
 	}
 	// Configura las variables de entorno locales
-	os.Setenv("DAEMON_ADDR", *resultDaemon.Parameter.Value)
+	//os.Setenv("DAEMON_ADDR", *resultDaemon.Parameter.Value)
 	return *resultDaemon.Parameter.Value, nil
 }
 
