@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
+	"log"
 	"github.com/astaxie/beego"
 	context2 "github.com/astaxie/beego/context"
 	"github.com/aws/aws-sdk-go/aws"
@@ -46,7 +46,7 @@ func InitXRay() error {
 	//función para obtener la dirección del demonio en EC2 del parameter store en AWS.
 	daemonaddr, err2 := setupEnvironment()
 	if err2 != nil {
-		log.Fatal("Error configurando el entorno:", err)
+		log.Fatal("Error configurando el entorno:", err2)
 	}
 
 	// Configuración X-Ray
