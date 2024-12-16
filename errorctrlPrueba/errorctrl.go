@@ -3,7 +3,8 @@ package errorctrl
 import (
 	"net/http"
 	"strconv"
-
+	"encoding/json"
+	
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 )
