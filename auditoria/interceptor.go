@@ -1,6 +1,7 @@
 package auditoria
 
 import (
+	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	"github.com/udistrital/utils_oas/request"
@@ -12,6 +13,8 @@ func InterceptMidRequest(ctx *context.Context) {
 		defer func() {
 			//Catch
 			if r := recover(); r != nil {
+				errMsg := fmt.Sprintf("Error: %v", r)
+				CreateLog(ctx, 400, "Error interno", errMsg) // Llama al sistema de logs
 			}
 		}()
 		// try
@@ -23,3 +26,4 @@ func InterceptMidRequest(ctx *context.Context) {
 func InitInterceptor() {
 	beego.InsertFilter("*", beego.BeforeExec, InterceptMidRequest, false)
 }
+
