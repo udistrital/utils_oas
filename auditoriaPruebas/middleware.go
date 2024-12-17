@@ -166,14 +166,48 @@ func ListenRequest(ctx *context.Context) {
 // Serializar los logs a JSON y registrarlos
 func logAsJSON(data map[string]interface{}) {
 	/// jsonLog, err := json.MarshalIndent(data, "", "  ")
-	jsonLog, err := json.Marshal(data)
+	/*jsonLog, err := json.Marshal(data)
 	if err != nil {
 		beego.Error("Error al serializar el log a JSON:", err)
 	} else {
 		formattedLog := fmt.Sprintf(`@&%s@&`, string(jsonLog))
 		beego.Info(string(formattedLog))
 		//beego.Info(string(jsonLog))
+	}*/
+	jsonData, err := json.Marshal(data["data"])
+	if err != nil {
+		beego.Error("Error al serializar el campo 'data' a JSON:", err)
+		jsonData = []byte("{}")
 	}
+
+	var pruebaSLog = "es la PRIMERA prueba {app_name: " + data["app_name"].(string) + 
+		", host: " + data["host"].(string) +
+		", end_point: " + data["end_point"].(string) +
+		", method: " + data["method"].(string) +
+		", date: " + data["date"].(string) +
+		", ip_user: " + data["ip_user"].(string) +
+		", user_agent: " + data["user_agent"].(string) +
+		", user: " + data["user"].(string) +
+	"}"
+	beego.Info(pruebaSLog)
+
+	var pruebaLog = "es la SEGUNDA prueba {app_name: " + data["app_name"].(string) + 
+					", host: " + data["host"].(string) +
+					", end_point: " + data["end_point"].(string) +
+					", method: " + data["method"].(string) +
+					", date: " + data["date"].(string) +
+					", ip_user: " + data["ip_user"].(string) +
+					", user_agent: " + data["user_agent"].(string) +
+					", user: " + data["user"].(string) +
+					", data: " + string(jsonData) +
+	"}"
+	var pruebaLogLog = fmt.Sprintf(`%s`, pruebaLog)
+	beego.Info(pruebaLogLog)
+
+	var log = fmt.Sprintf(`@&ES LA TERCERA PRUEBA: app_name:%s@&host:%s@&end_point:%s@&method:%s@&date:%s@&ip_user:%s@&user_agent:%s@&user:%s@&data:%s@$`,
+		data["app_name"], data["host"], data["end_point"], data["method"], data["date"],
+		data["ip_user"], data["user_agent"], data["user"], data["data"])
+	beego.Info(log)
 }
 
 // Sanitizar el input para evitar tipos no soportados
