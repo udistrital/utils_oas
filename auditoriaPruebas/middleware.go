@@ -170,7 +170,9 @@ func logAsJSON(data map[string]interface{}) {
 	if err != nil {
 		beego.Error("Error al serializar el log a JSON:", err)
 	} else {
-		beego.Info(string(jsonLog))
+		formattedLog := fmt.Sprintf(`@&%s@&`, string(jsonLog))
+		beego.Info(string(formattedLog))
+		//beego.Info(string(jsonLog))
 	}
 }
 
