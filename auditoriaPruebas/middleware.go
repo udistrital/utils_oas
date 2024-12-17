@@ -165,7 +165,8 @@ func ListenRequest(ctx *context.Context) {
 
 // Serializar los logs a JSON y registrarlos
 func logAsJSON(data map[string]interface{}) {
-	jsonLog, err := json.MarshalIndent(data, "", "  ")
+	/// jsonLog, err := json.MarshalIndent(data, "", "  ")
+	jsonLog, err := json.Marshal(data)
 	if err != nil {
 		beego.Error("Error al serializar el log a JSON:", err)
 	} else {
