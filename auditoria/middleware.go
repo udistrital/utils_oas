@@ -3,7 +3,8 @@ package auditoria
 import (
 	"fmt"
 	"time"
-
+	"encoding/json"
+	
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	"github.com/patrickmn/go-cache"
@@ -122,6 +123,22 @@ func ListenRequest(ctx *context.Context) {
 			beego.Info(log)
 		}
 	}()
+}
+
+func CreateLog(ctx *context.Context, statusCode int, message string, errorDetails string) {
+	log := map[string]interface{}{
+		"timestamp":  time.Now().Format(time.RFC3339),
+		"method":     ctx.Input.Method(),
+		"endpoint":   ctx.Input.URL(),
+		"statusCode": statusCode,
+		"message":    message,
+	}
+	if errorDetails != "" {
+		log["error"] = errorDetails
+	}
+
+	logJSON, _ := json.Marshal(log)
+	beego.Info(string(logJSON)) // Enviar el log al sistema correspondiente
 }
 
 func InitMiddleware() {
