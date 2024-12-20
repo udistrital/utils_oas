@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"log"
+	//"log"
 	"github.com/astaxie/beego"
 	context2 "github.com/astaxie/beego/context"
 	"github.com/aws/aws-sdk-go/aws"
