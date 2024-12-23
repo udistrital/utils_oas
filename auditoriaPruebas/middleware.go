@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"encoding/json"
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	"github.com/patrickmn/go-cache"
-	"encoding/json"
 )
 
 type Usuario struct {
@@ -53,22 +54,22 @@ func getUserInfo(ctx *context.Context) (u string) {
 
 /*func ListenRequest(ctx *context.Context) {
 
-	/*---- Declaración de variables ---- 
+	/*---- Declaración de variables ----
 
-	/*---- Información relacionada a la aplicación y la petición ---- 
+	/*---- Información relacionada a la aplicación y la petición ----
 	var app_name string  //Nombre del API al que se le hace la petición
 	var host string      //Host del API
 	var end_point string //End point al que se le realiza la petición
 	var method string    //Método REST de la petición
 	var date string      //Fecha y hora de la operación
 
-	/*---- Información relacionada con el usuario ---- 
+	/*---- Información relacionada con el usuario ----
 	var ip_user string    //IP del usuario   <----- pendiente
 	var user_agent string //Tipo de aplicación, sistema operativo, provedor del software o laversión del software de la petición del agente de usuario
 	var user string       //Nombre de usuario en WSO2 que realiza la petición    <----- pendiente
 	// var access_token string //Access token asignado al usuario que realiza peticion
 
-	/*---- Información relacionada con el cuerpo de la petición ---- 
+	/*---- Información relacionada con el cuerpo de la petición ----
 	var data_response interface{} //Payload del servicio
 
 	/*---- Asignación de variables ----
@@ -105,7 +106,7 @@ func getUserInfo(ctx *context.Context) (u string) {
 		// try
 		// access_token = ctx.Request.Header["Authorization"][0]
 
-		/*---- Obtención del usuario ---- 
+		/*---- Obtención del usuario ----
 		defer func() {
 			if r := recover(); r != nil {
 				// access_token = "Error WSO2"
@@ -125,7 +126,6 @@ func getUserInfo(ctx *context.Context) (u string) {
 	}()
 }*/
 
-
 func ListenRequest(ctx *context.Context) {
 	go func() {
 		defer func() {
@@ -138,7 +138,7 @@ func ListenRequest(ctx *context.Context) {
 					"date":       time.Now().Format(time.RFC3339),
 					"ip_user":    ctx.Input.IP(),
 					"user_agent": getUserAgent(ctx),
-					"user":       "Error WSO2 - Sin usuario"
+					"user":       "Error WSO2 - Sin usuario",
 					"data":       sanitizeInputData(ctx.Input.Data()),
 				}
 				logAsJSON(logData)
@@ -168,8 +168,8 @@ func logAsJSON(data map[string]interface{}) {
 	if err != nil {
 		beego.Error("Error al serializar el campo 'data' a JSON:", err)
 		jsonData = []byte("{}")
-	}  else {
-		var pruebaLog = "{app_name: " + data["app_name"].(string) + 
+	} else {
+		var pruebaLog = "{app_name: " + data["app_name"].(string) +
 			", host: " + data["host"].(string) +
 			", end_point: " + data["end_point"].(string) +
 			", method: " + data["method"].(string) +
@@ -178,7 +178,7 @@ func logAsJSON(data map[string]interface{}) {
 			", user_agent: " + data["user_agent"].(string) +
 			", user: " + data["user"].(string) +
 			", data: " + string(jsonData) +
-		"}"
+			"}"
 		var pruebaLogLog = fmt.Sprintf(`%s`, pruebaLog)
 		beego.Info(pruebaLogLog)
 	}
