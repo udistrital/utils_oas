@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"encoding/json"
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/orm"
@@ -101,7 +103,6 @@ func ListenRequest(logger *customSQLLogger) func(ctx *context.Context) {
 			sqlQuery = "No se registro sentencia SQL"
 			//log.Println("No se encontró ninguna sentencia SQL registrada de ListenRequest.")
 		}
-
 		defer func() {
 			if r := recover(); r != nil {
 				logData := map[string]interface{}{
