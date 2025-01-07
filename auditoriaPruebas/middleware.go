@@ -10,10 +10,10 @@ import (
 	"github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/orm"
 	"github.com/patrickmn/go-cache"
-	"encoding/json"
+
 	//"log"
-	"strings"
 	"regexp"
+	"strings"
 )
 
 type Usuario struct {
@@ -148,17 +148,17 @@ func logAsJSON(data map[string]interface{}) {
 		jsonData = []byte("{}")
 	}
 
-	var pruebaLog = "{app_name: " + data["app_name"].(string) + 
-					", host: " + data["host"].(string) +
-					", end_point: " + data["end_point"].(string) +
-					", method: " + data["method"].(string) +
-					", date: " + data["date"].(string) +
-					", sql_orm: " + data["sql_orm"].(string) +
-					", ip_user: " + data["ip_user"].(string) +
-					", user_agent: " + data["user_agent"].(string) +
-					", user: " + data["user"].(string) +
-					", data: " + string(jsonData) +
-	"}"
+	var pruebaLog = "{app_name: " + data["app_name"].(string) +
+		", host: " + data["host"].(string) +
+		", end_point: " + data["end_point"].(string) +
+		", method: " + data["method"].(string) +
+		", date: " + data["date"].(string) +
+		", sql_orm: " + data["sql_orm"].(string) +
+		", ip_user: " + data["ip_user"].(string) +
+		", user_agent: " + data["user_agent"].(string) +
+		", user: " + data["user"].(string) +
+		", data: " + string(jsonData) +
+		"}"
 	var pruebaLogLog = fmt.Sprintf(`%s`, pruebaLog)
 	beego.Info(pruebaLogLog)
 }
@@ -191,7 +191,7 @@ func InitMiddleware() {
 }
 
 type customSQLLogger struct {
-	lastQuery string 
+	lastQuery string
 }
 
 func (l *customSQLLogger) Write(p []byte) (n int, err error) {
@@ -205,6 +205,6 @@ func (l *customSQLLogger) Write(p []byte) (n int, err error) {
 }
 
 func (l *customSQLLogger) GetLastQuery() string {
-	query := strings.TrimSpace(l.lastQuery)                 
+	query := strings.TrimSpace(l.lastQuery)
 	return query
 }
