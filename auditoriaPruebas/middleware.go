@@ -153,8 +153,8 @@ func logAsJSON(data map[string]interface{}) {
 		", end_point: " + data["end_point"].(string) +
 		", method: " + data["method"].(string) +
 		", date: " + data["date"].(string) +
-		", sql_orm: " + data["sql_orm"].(string) +
-		", ip_user: " + data["ip_user"].(string) +
+		", sql_orm: {" + data["sql_orm"].(string) +
+		"}, ip_user: " + data["ip_user"].(string) +
 		", user_agent: " + data["user_agent"].(string) +
 		", user: " + data["user"].(string) +
 		", data: " + string(jsonData) +
@@ -197,7 +197,8 @@ type customSQLLogger struct {
 func (l *customSQLLogger) Write(p []byte) (n int, err error) {
 	logMessage := string(p)
 
-	re := regexp.MustCompile(`\[(SELECT|INSERT|UPDATE|DELETE).*?\]`)
+	//re := regexp.MustCompile(`\[(SELECT|INSERT|UPDATE|DELETE).*?\]`)
+	re := regexp.MustCompile(`\[(SELECT|INSERT|UPDATE|DELETE).*`)
 	match := re.FindString(logMessage)
 	l.lastQuery = match
 
