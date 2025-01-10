@@ -13,13 +13,24 @@ func ErrorControlController(c beego.Controller, controller string) {
 	if err := recover(); err != nil {
 		logs.Error(err)
 		localError := err.(map[string]interface{})
-		c.Data["mesaage"] = (beego.AppConfig.String("appname") + "/" + controller + "/" + (localError["funcion"]).(string))
+		c.Data["message"] = (beego.AppConfig.String("appname") + "/" + controller + "/" + (localError["funcion"]).(string))
 		c.Data["data"] = (localError["err"])
 		if status, ok := localError["status"]; ok && status != nil {
-			c.Abort(status.(string))
+			if statusCode, ok := status.(int); ok {
+				c.Ctx.Output.SetStatus(statusCode)
+			} else {
+				c.Ctx.Output.SetStatus(http.StatusInternalServerError)
+			}
 		} else {
-			c.Abort(strconv.Itoa(http.StatusInternalServerError)) // Unhandled Error!
+			c.Ctx.Output.SetStatus(http.StatusInternalServerError)
 		}
+		c.Data["json"] = map[string]interface{}{
+			"Data":    localError["err"],
+			"Message": c.Data["message"],
+			"Status":  strconv.Itoa(c.Ctx.Output.Status),
+			"Success": false,
+		}
+		c.ServeJSON()
 	}
 }
 
