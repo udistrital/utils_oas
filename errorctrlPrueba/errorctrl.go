@@ -14,10 +14,10 @@ func ErrorControlController(c beego.Controller, controller string) {
 		localError := err.(map[string]interface{})
 		c.Data["message"] = (beego.AppConfig.String("appname") + "/" + controller + "/" + (localError["funcion"]).(string))
 		c.Data["data"] = (localError["err"])
-		if _, ok := localError["status"]; ok {
-			c.Ctx.Output.SetStatus(400)
+		if status, ok := localError["status"]; ok && status !=nil{
+			c.Ctx.Output.SetStatus(status.(string))
 		} else {
-			c.Ctx.Output.SetStatus(500)
+			c.Ctx.Output.SetStatus(strconv.Itoa(http.StatusInternalServerError))
 		}
 		c.Data["json"] = map[string]interface{}{
 			"Data":    localError["err"],
