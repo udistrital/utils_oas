@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-func GetPasswordFromParameterStore(paramName string) (string, error) {
+func GetParameterFromParameterStore(paramName string) (string, error) {
 	// Create a new session
 	sess, err := session.NewSession()
 	if err != nil {
