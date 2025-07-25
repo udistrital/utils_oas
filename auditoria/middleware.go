@@ -11,7 +11,6 @@ import (
 	"github.com/astaxie/beego/orm"
 	"github.com/patrickmn/go-cache"
 
-	//"log"
 	"regexp"
 	"strings"
 )
