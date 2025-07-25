@@ -59,13 +59,15 @@ func getUserInfo(ctx *context.Context) (u string) {
 
 func ListenRequest(logger *customSQLLogger) func(ctx *context.Context) {
 	return func(ctx *context.Context) {
-		sqlQuery := logger.GetLastQuery()
-		if sqlQuery != "" {
-			//log.Printf("Sentencia SQL capturada en middleware de ListenRequest: %s", sqlQuery)
-		} else {
-			sqlQuery = "No se registro sentencia SQL"
-			//log.Println("No se encontró ninguna sentencia SQL registrada de ListenRequest.")
+		if ctx.Request.URL.String() == "/" {
+			return
 		}
+
+		sqlQuery := logger.GetLastQuery()
+		if sqlQuery == "" {
+			sqlQuery = "No se registró sentencia SQL"
+		}
+
 		defer func() {
 			if r := recover(); r != nil {
 				logData := map[string]interface{}{
