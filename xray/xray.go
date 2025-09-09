@@ -31,12 +31,12 @@ var capturar bool
 func InitXRay() error {
 	parameterStore, exists := os.LookupEnv("PARAMETER_STORE")
 	if !exists {
-		parameterStore = "/prepod"
+		parameterStore = "preprod"
 	}
 
-	daemonAddr, err := ssm.GetParameterFromParameterStore(parameterStore + "/utils/xray/DaemonAddr")
+	daemonAddr, err := ssm.GetParameterFromParameterStore("/" + parameterStore + "/utils/xray/DaemonAddr")
 	if err != nil {
-		logs.Critical("Error retrieving password: %v", err)
+		logs.Critical("Error retrieving daemon address: %v", err)
 	}
 
 	// Establecer variables de entorno para X-Ray
@@ -51,17 +51,10 @@ func InitXRay() error {
 	//xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
 	//Configuración de X-Ray
 
-	//función para obtener la dirección del demonio en EC2 del parameter store en AWS.
-	//daemonaddr, err2 := setupEnvironment()
-	//if err2 != nil {
-	//	log.Fatal("Error configurando el entorno:", err2)
-	//}
-
 	// Configuración X-Ray
 	xray.Configure(xray.Config{
 		DaemonAddr: daemonAddr, // Dirección dinamica del demonio de X-ray
-		// DaemonAddr: "3.81.69.43:2000", // Dirección del demonio de X-Ray
-		//DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio en local
+		// DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio en local
 		LogLevel:  "debug", // Nivel de log deseado
 		LogFormat: "json",  // Formato de log deseado (text o json)
 	})
