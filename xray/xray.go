@@ -87,12 +87,12 @@ func InitXRay() error {
 // - GlobalContext: Inicialización de un contexto vacío para almacenar los segmentos que se generen.
 // - Seg: Segmento principal de la Traza.
 func BeginSegment(ctx *context2.Context) {
-	if ctx.Input.Context.Request.URL.String() == "/" {
+	SegmentName = ctx.Input.Context.Request.Host
+	if ctx.Input.Context.Request.URL.String() == "/" || strings.HasPrefix(SegmentName, "localhost") {
 		capturar = false
 	} else {
 		capturar = true
 	}
-	SegmentName = ctx.Input.Context.Request.Host
 	URL = "http://" + SegmentName + ctx.Input.Context.Request.URL.String()
 	Method = ctx.Request.Method
 	GlobalContext = context.Background()
@@ -243,17 +243,10 @@ func BeginSegmentWithContextTP(code int, traceID []string, ctx *context2.Context
 	env := ""
 	if strings.HasPrefix(SegmentName, "pruebas") {
 		env = "_test"
-		fmt.Println("Entorno de pruebas", AppName+env)
-	} else if strings.HasPrefix(SegmentName, "api") {
-		env = "_prod"
-		fmt.Println("Entorno de producción", AppName+env)
-	} else if strings.HasPrefix(SegmentName, "localhost") {
-		env = "_local"
-		fmt.Println("Entorno de desarrollo", AppName+env)
 	}
 
 	ctx2, seg := xray.BeginSegment(GlobalContext, AppName+env)
-	if capturar == false {
+	if !capturar {
 		seg.Sampled = false
 	}
 	GlobalContext = ctx2
