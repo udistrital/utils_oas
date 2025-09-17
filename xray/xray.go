@@ -242,18 +242,20 @@ func EndSegmentErr(status int, err interface{}) {
 func BeginSegmentWithContextTP(code int, traceID []string, ctx *context2.Context) *xray.Segment {
 	env := ""
 	if strings.HasPrefix(SegmentName, "pruebas") {
-		fmt.Println("Entorno de pruebas")
 		env = "_test"
+		fmt.Println("Entorno de pruebas", AppName+env)
 	} else if strings.HasPrefix(SegmentName, "api") {
-		fmt.Println("Entorno de producción")
 		env = "_prod"
+		fmt.Println("Entorno de producción", AppName+env)
 	} else if strings.HasPrefix(SegmentName, "localhost") {
-		fmt.Println("Entorno de desarrollo")
 		env = "_local"
+		fmt.Println("Entorno de desarrollo", AppName+env)
 	}
 
 	ctx2, seg := xray.BeginSegment(GlobalContext, AppName+env)
-	seg.Sampled = !capturar
+	if capturar == false {
+		seg.Sampled = false
+	}
 	GlobalContext = ctx2
 	seg.Origin = URL
 	seg.HTTP = &xray.HTTPData{
