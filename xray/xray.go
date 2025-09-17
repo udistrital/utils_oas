@@ -19,6 +19,7 @@ import (
 
 var GlobalContext context.Context
 var SegmentName string
+var AppName = beego.AppConfig.String("appname")
 var StatusCode int
 var Seg *xray.Segment
 var URL string
@@ -239,7 +240,7 @@ func EndSegmentErr(status int, err interface{}) {
 // Devoluciones:
 // - seg: puntero al segmento principal recién creado.
 func BeginSegmentWithContextTP(code int, traceID []string, ctx *context2.Context) *xray.Segment {
-	ctx2, seg := xray.BeginSegment(GlobalContext, SegmentName)
+	ctx2, seg := xray.BeginSegment(GlobalContext, AppName)
 	if capturar == false {
 		seg.Sampled = false
 	}
