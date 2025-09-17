@@ -240,12 +240,12 @@ func EndSegmentErr(status int, err interface{}) {
 // Devoluciones:
 // - seg: puntero al segmento principal recién creado.
 func BeginSegmentWithContextTP(code int, traceID []string, ctx *context2.Context) *xray.Segment {
-	name := AppName
+	suffix := ""
 	if strings.HasPrefix(SegmentName, "pruebas") {
-		name += "_test"
+		suffix = "_test"
 	}
 
-	ctx2, seg := xray.BeginSegment(GlobalContext, name)
+	ctx2, seg := xray.BeginSegment(GlobalContext, AppName+suffix)
 	seg.Sampled = !capturar
 	GlobalContext = ctx2
 	seg.Origin = URL
