@@ -1,8 +1,15 @@
 package security
 
-import "github.com/astaxie/beego/context"
+import (
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
+)
 
-func SecurityHeaders(ctx *context.Context) {
+func SetSecurityHeaders() {
+	beego.InsertFilter("*", beego.BeforeExec, securityHeaders)
+}
+
+func securityHeaders(ctx *context.Context) {
 	ctx.Output.Header("Clear-Site-Data", "'cache', 'cookies', 'storage', 'executionContexts'")
 	ctx.Output.Header("Cross-Origin-Embedder-Policy", "require-corp")
 	ctx.Output.Header("Cross-Origin-Opener-Policy", "same-origin")
