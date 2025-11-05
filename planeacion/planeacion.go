@@ -98,19 +98,21 @@ func formatNumberString(x string, precision int, thousand string, decimal string
 }
 
 func ConvertirStringJson(diccionario map[string]interface{}) map[string]interface{} {
-	diccionarioStrings := map[string]interface{}{}
-
+	dicStrings := map[string]interface{}{}
 	for clave, valor := range diccionario {
-		jsonBytes, _ := json.Marshal(valor)
-		if string(jsonBytes) == "null" {
-			diccionarioStrings[clave] = "{}"
-		} else if clave == "_id" || clave == "fecha_creacion" {
-			diccionarioStrings[clave] = valor
+		if clave == "informacion" || clave == "cualitativo" || clave == "cuantitativo" || clave == "estado" {
+			datoJson := make(map[string]interface{})
+			json.Unmarshal([]byte(valor.(string)), &datoJson)
+			dicStrings[clave] = datoJson
+		} else if clave == "evidencia" {
+			var datoJson []map[string]interface{}
+			json.Unmarshal([]byte(valor.(string)), &datoJson)
+			dicStrings[clave] = datoJson
 		} else {
-			diccionarioStrings[clave] = string(jsonBytes)
+			dicStrings[clave] = valor
 		}
 	}
-	return diccionarioStrings
+	return dicStrings
 }
 
 func ConvertirJsonString(diccionario map[string]interface{}) map[string]interface{} {
