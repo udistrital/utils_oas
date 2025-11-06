@@ -37,7 +37,7 @@ func InitXRay() error {
 
 	daemonAddr, err := ssm.GetParameterFromParameterStore("/" + parameterStore + "/utils/xray/DaemonAddr")
 	if err != nil {
-		logs.Critical("Error retrieving daemon address: %v", err)
+		logs.Error("error consultando daemon address: %v", err)
 	}
 
 	// Establecer variables de entorno para X-Ray
@@ -66,7 +66,7 @@ func InitXRay() error {
 	// Habilita el seguimiento de X-Ray para los clientes
 	xray.AWS(ecsClient.Client)
 
-	fmt.Println("Listed buckets successfully")
+	logs.Info("X-Ray inicializado correctamente")
 
 	//Filtros X-Ray al inicio y fin de la ejecución de la API.
 	beego.InsertFilter("*", beego.BeforeExec, BeginSegment)
