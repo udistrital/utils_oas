@@ -30,8 +30,8 @@ var capturar bool
 // InitXRay inicializa la configuración de X-Ray y configura los clientes necesarios.
 // Devuelve un error si ocurre algún error durante la inicialización.
 func InitXRay() error {
-	parameterStore, exists := os.LookupEnv("PARAMETER_STORE")
-	if !exists {
+	parameterStore := beego.AppConfig.String("parameterStore")
+	if parameterStore == "" {
 		parameterStore = "preprod"
 	}
 
