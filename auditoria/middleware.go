@@ -8,6 +8,7 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
+	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/orm"
 	"github.com/patrickmn/go-cache"
 
@@ -123,8 +124,8 @@ func logAsJSON(data map[string]interface{}) {
 		", user: " + data["user"].(string) +
 		", data: " + string(jsonData) +
 		"}"
-	var pruebaLogLog = fmt.Sprintf(`%s`, pruebaLog)
-	beego.Info(pruebaLogLog)
+
+	logs.Info(pruebaLog)
 }
 
 func sanitizeInputData(input interface{}) interface{} {
@@ -149,7 +150,7 @@ func InitMiddleware() {
 	customLogger := &customSQLLogger{}
 	orm.DebugLog = orm.NewLog(customLogger)
 
-	fmt.Println("Middleware inicializado correctamente.")
+	logs.Info("middleware inicializado correctamente.")
 	beego.InsertFilter("*", beego.AfterExec, ListenRequest(customLogger), false)
 }
 
