@@ -56,7 +56,7 @@ func InitWithHandler(statusCheckHandler func() (statusCheckError interface{})) {
 			if checkCount == 0 {
 				logs.Warn("APP_JUST_STARTED (please compare against the previous logged checkCount value to dismiss uint overflow)")
 			}
-			logs.Debug("checkCount:", checkCount)
+
 			checkCount++
 		}()
 
