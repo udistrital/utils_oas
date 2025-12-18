@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-//funcion para generar canales de interface{}
+// funcion para generar canales de interface{}
 func GenChanInterface(mp ...interface{}) <-chan interface{} {
 	out := make(chan interface{})
 	go func() {
@@ -28,7 +28,7 @@ func digester(done <-chan interface{}, f func(interface{}, ...interface{}) inter
 	}
 }
 
-//funcion para administrar las go rutines armadas para la consulta de solicitudes de rp.
+// funcion para administrar las go rutines armadas para la consulta de solicitudes de rp.
 func Digest(done <-chan interface{}, f func(interface{}, ...interface{}) interface{}, in <-chan interface{}, params []interface{}, maxConcurrency ...int) (outchan <-chan interface{}) {
 	out := make(chan interface{})
 	var wg sync.WaitGroup

@@ -138,7 +138,7 @@ func ToMap(in interface{}, tag string) (map[string]interface{}, error) {
 	)
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf(fmt.Sprintf("%s", r))
+			err = fmt.Errorf("%v", r)
 		}
 	}()
 	out := make(map[string]interface{})

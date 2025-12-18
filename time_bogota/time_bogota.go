@@ -2,8 +2,8 @@ package time_bogota
 
 import (
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/astaxie/beego/logs"
 )

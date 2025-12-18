@@ -1,5 +1,9 @@
 package optimize
-import("fmt")
+
+import (
+	"fmt"
+)
+
 var WorkQueue = make(chan WorkRequest)
 var WorkerQueue chan chan WorkRequest
 
