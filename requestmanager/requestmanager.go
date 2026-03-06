@@ -8,7 +8,7 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
-	"gopkg.in/go-playground/validator.v9"
+	"github.com/go-playground/validator"
 )
 
 var validate *validator.Validate

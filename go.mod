@@ -9,12 +9,12 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.7
 	github.com/aws/aws-xray-sdk-go/v2 v2.0.0
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
+	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/lib/pq v1.10.0
 	github.com/mndrix/golog v0.0.0-20170330170653-a28e2a269775
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/phpdave11/gofpdf v1.4.2
 	github.com/xuri/excelize/v2 v2.8.1
-	gopkg.in/go-playground/validator.v9 v9.31.0
 )
 
 require (

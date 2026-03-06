@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/globalsign/mgo/bson"
-	"gopkg.in/go-playground/validator.v9"
+	"github.com/go-playground/validator"
 )
 
 var validate *validator.Validate
