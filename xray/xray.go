@@ -47,7 +47,7 @@ func InitXRay() error {
 		logs.Error("error configurando xray: %v", err)
 	}
 
-	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
+	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelInfo))
 
 	logs.Info("X-Ray inicializado correctamente")
 
