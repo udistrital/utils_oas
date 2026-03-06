@@ -1,26 +1,23 @@
 package ssm
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
-func GetParameterFromParameterStore(paramName string) (string, error) {
-	// Create a new session
-	sess, err := session.NewSession()
+func GetParameterFromParameterStore(ctx context.Context, name string) (string, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		return "", fmt.Errorf("unable to create session: %w", err)
+		return "", fmt.Errorf("unable to load SDK config: %w", err)
 	}
 
-	// Create an SSM client from the session
-	ssmClient := ssm.New(sess)
-
-	// Get the parameter
-	output, err := ssmClient.GetParameter(&ssm.GetParameterInput{
-		Name:           aws.String(paramName),
+	ssmClient := ssm.NewFromConfig(cfg)
+	output, err := ssmClient.GetParameter(ctx, &ssm.GetParameterInput{
+		Name:           aws.String(name),
 		WithDecryption: aws.Bool(true),
 	})
 	if err != nil {

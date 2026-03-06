@@ -11,9 +11,8 @@ import (
 	"github.com/astaxie/beego"
 	context2 "github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/logs"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/aws-xray-sdk-go/xray"
+	"github.com/aws/aws-xray-sdk-go/v2/xray"
+	"github.com/aws/aws-xray-sdk-go/v2/xraylog"
 	"github.com/udistrital/utils_oas/ssm"
 )
 
@@ -35,36 +34,20 @@ func InitXRay() error {
 		parameterStore = "preprod"
 	}
 
-	daemonAddr, err := ssm.GetParameterFromParameterStore("/" + parameterStore + "/utils/xray/DaemonAddr")
+	daemonAddr, err := ssm.GetParameterFromParameterStore(context.Background(), "/"+parameterStore+"/utils/xray/DaemonAddr")
 	if err != nil {
 		logs.Error("error consultando daemon address: %v", err)
 	}
 
-	// Establecer variables de entorno para X-Ray
-	os.Setenv("AWS_XRAY_NOOP_ID", "true")
-	os.Setenv("AWS_XRAY_DEBUG_MODE", "TRUE")
-	// Crea una nueva sesión con configuración compartida
-	XraySess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
-	if err != nil {
-		return err
-	}
-	//Activación de logs y modo Debug
-	//xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
-	//Configuración de X-Ray
-
-	// Configuración X-Ray
-	xray.Configure(xray.Config{
-		DaemonAddr: daemonAddr, // Dirección dinamica del demonio de X-ray
-		// DaemonAddr: "127.0.0.1:2000", // Establece la dirección y el puerto del demonio en local
-		LogLevel:  "debug", // Nivel de log deseado
-		LogFormat: "json",  // Formato de log deseado (text o json)
+	err = xray.Configure(xray.Config{
+		DaemonAddr: daemonAddr,
 	})
 
-	// Crea clliente para ECS
-	ecsClient := ecs.New(XraySess)
+	if err != nil {
+		logs.Error("error configurando xray: %v", err)
+	}
 
-	// Habilita el seguimiento de X-Ray para los clientes
-	xray.AWS(ecsClient.Client)
+	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelDebug))
 
 	logs.Info("X-Ray inicializado correctamente")
 
@@ -173,8 +156,8 @@ func UpdateState(status int, err error) {
 			Status: StatusCode,
 		},
 	}
-	if status == 500 || status == 501 || status == 502 || status == 503 {
-		Seg.AddError(fmt.Errorf("%v", err))
+	if status == http.StatusInternalServerError || status == http.StatusNotImplemented || status == http.StatusBadGateway || status == http.StatusServiceUnavailable {
+		_ = Seg.AddError(fmt.Errorf("%v", err))
 		Seg.Close(nil)
 	}
 }
@@ -197,8 +180,8 @@ func ErrorController5xx(err error) {
 			Status: StatusCode,
 		},
 	}
-	Seg.AddMetadata("Error", err)
-	Seg.AddError(fmt.Errorf("%v", err))
+	_ = Seg.AddMetadata("Error", err)
+	_ = Seg.AddError(fmt.Errorf("%v", err))
 	Seg.Close(nil)
 }
 
@@ -223,7 +206,7 @@ func EndSegmentErr(status int, err interface{}) {
 			Status: StatusCode,
 		},
 	}
-	Seg.AddMetadata("Error", err)
+	_ = Seg.AddMetadata("Error", err)
 	Seg.Close(nil)
 }
 
@@ -313,7 +296,7 @@ func UpdateSegmentSec(resp *http.Response, err error, seg *xray.Segment) {
 	var status int
 	if err != nil {
 		status = 500
-		seg.AddError(err)
+		_ = seg.AddError(err)
 	} else {
 		status = resp.StatusCode
 		if resp.Header.Values("Resp-X-Amzn-Trace-Id") != nil {

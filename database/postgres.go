@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"errors"
 	"net/url"
 
@@ -19,13 +20,15 @@ func BuildPostgresConnectionString() (string, error) {
 
 	parameterBasePath := "/" + baseParameterStore + "/" + beego.AppConfig.String("appname") + "/db/"
 
-	username, err := ssm.GetParameterFromParameterStore(parameterBasePath + "username")
+	ctx := context.Background()
+
+	username, err := ssm.GetParameterFromParameterStore(ctx, parameterBasePath+"username")
 	if err != nil {
 		logs.Critical("error consultando username: %v", err)
 		return "", errors.New("error consultando credenciales: " + err.Error())
 	}
 
-	password, err := ssm.GetParameterFromParameterStore(parameterBasePath + "password")
+	password, err := ssm.GetParameterFromParameterStore(ctx, parameterBasePath+"password")
 	if err != nil {
 		logs.Critical("error consultando credenciales: %v", err)
 		return "", errors.New("error consultando credenciales: " + err.Error())
