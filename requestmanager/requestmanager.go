@@ -8,10 +8,7 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
-	"github.com/go-playground/validator"
 )
-
-var validate *validator.Validate
 
 // FillRequestWithPanic ... unmarshal body request to an interface . panic if some error hapen. Only objects no Arrays.
 func FillRequestWithPanic(c *beego.Controller, output interface{}) {
