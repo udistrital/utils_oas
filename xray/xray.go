@@ -18,13 +18,11 @@ import (
 
 var GlobalContext context.Context
 var SegmentName string
-var AppName = beego.AppConfig.String("appname")
+var appName = beego.AppConfig.String("appname")
 var StatusCode int
 var Seg *xray.Segment
 var URL string
 var Method string
-var Controller string
-var capturar bool
 
 // InitXRay inicializa la configuración de X-Ray y configura los clientes necesarios.
 // Devuelve un error si ocurre algún error durante la inicialización.
@@ -52,8 +50,8 @@ func InitXRay() error {
 	logs.Info("X-Ray inicializado correctamente")
 
 	//Filtros X-Ray al inicio y fin de la ejecución de la API.
-	beego.InsertFilter("*", beego.BeforeExec, BeginSegment)
-	beego.InsertFilter("*", beego.AfterExec, EndSegment, false)
+	beego.InsertFilter("/:version/*", beego.BeforeExec, BeginSegment)
+	beego.InsertFilter("/:version/*", beego.AfterExec, EndSegment, false)
 	return nil
 }
 
@@ -71,16 +69,14 @@ func InitXRay() error {
 // - Seg: Segmento principal de la Traza.
 func BeginSegment(ctx *context2.Context) {
 	SegmentName = ctx.Input.Context.Request.Host
-	if ctx.Input.Context.Request.URL.String() == "/" || strings.HasPrefix(SegmentName, "localhost") {
-		capturar = false
-	} else {
-		capturar = true
+	if strings.HasPrefix(SegmentName, "localhost") {
+		Seg = nil
+		return
 	}
 	URL = "http://" + SegmentName + ctx.Input.Context.Request.URL.String()
 	Method = ctx.Request.Method
 	GlobalContext = context.Background()
-	seg := BeginSegmentWithContextTP(StatusCode, ctx.Request.Header.Values("X-Amzn-Trace-Id"), ctx)
-	Seg = seg
+	Seg = BeginSegmentWithContextTP(StatusCode, ctx.Request.Header.Values("X-Amzn-Trace-Id"), ctx)
 }
 
 // Crea un nuevo subsegmento para seguimiento y lo completa con datos HTTP.
@@ -113,6 +109,9 @@ func BeginSubsegment(subsegment, method, URL string, status int) (context.Contex
 // Parámetros:
 // - ctx: puntero a objeto context de Beego
 func EndSegment(ctx *context2.Context) {
+	if Seg == nil {
+		return
+	}
 	// Obtener el valor de la clave "json" del contexto
 	jsonValue := ctx.Input.GetData("json")
 	// Convertir el valor a un mapa
@@ -228,10 +227,7 @@ func BeginSegmentWithContextTP(code int, traceID []string, ctx *context2.Context
 		env = "_test"
 	}
 
-	ctx2, seg := xray.BeginSegment(GlobalContext, AppName+env)
-	if !capturar {
-		seg.Sampled = false
-	}
+	ctx2, seg := xray.BeginSegment(GlobalContext, appName+env)
 	GlobalContext = ctx2
 	seg.Origin = URL
 	seg.HTTP = &xray.HTTPData{
