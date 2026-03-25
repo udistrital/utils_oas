@@ -240,7 +240,7 @@ func GetJson(urlp string, target interface{}) error {
 	return json.NewDecoder(resp.Body).Decode(target)
 }
 
-func GetJsonTest(url string, target interface{}) (response *http.Response, err error) {
+func GetJsonTest(url string, target interface{}) (*http.Response, error) {
 	req, _ := http.NewRequest("GET", url, nil)
 	seg := xray.BeginSegmentSec(req)
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -254,7 +254,7 @@ func GetJsonTest(url string, target interface{}) (response *http.Response, err e
 			beego.Error(err)
 		}
 	}()
-	return resp, json.NewDecoder(response.Body).Decode(target)
+	return resp, json.NewDecoder(resp.Body).Decode(target)
 }
 
 func GetJsonTest2(url string, target interface{}) (status int, err error) {
