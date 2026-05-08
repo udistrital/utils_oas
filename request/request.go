@@ -4,17 +4,54 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/udistrital/utils_oas/xray"
+	"github.com/aws/aws-xray-sdk-go/v2/xray"
 )
 
 var ErrResponseDecode = errors.New("response body could not be decoded into target")
+
+var defaultClient = &http.Client{Timeout: 30 * time.Second}
+
+// doRequest executes req using the provided HTTP client, wrapping the call with
+// an X-Ray subsegment scoped to the request's context. The caller is
+// responsible for closing resp.Body.
+func doRequest(client *http.Client, req *http.Request) (*http.Response, error) {
+	ctx, subseg := xray.BeginSubsegment(req.Context(), req.Host)
+	if subseg != nil {
+		subseg.HTTP = &xray.HTTPData{
+			Request: &xray.RequestData{
+				Method: req.Method,
+				URL:    req.URL.String(),
+			},
+			Response: &xray.ResponseData{Status: 200},
+		}
+	}
+	if seg := xray.GetSegment(req.Context()); seg != nil {
+		req.Header.Set("X-Amzn-Trace-Id", seg.DownstreamHeader().String())
+	}
+
+	resp, err := client.Do(req.WithContext(ctx))
+
+	if subseg != nil {
+		var status int
+		if err != nil {
+			status = http.StatusInternalServerError
+			_ = subseg.AddError(err)
+		} else {
+			status = resp.StatusCode
+			if resp.Header.Get("Resp-X-Amzn-Trace-Id") != "" {
+				subseg.Sampled = false
+			}
+		}
+		subseg.HTTP.Response = &xray.ResponseData{Status: status}
+		subseg.Close(nil)
+	}
+	return resp, err
+}
 
 // GetWithContext makes a GET request to the given URL using the provided context.
 // Checks for non-2xx HTTP status codes, and decodes the response body into target.
@@ -24,14 +61,9 @@ func GetWithContext(ctx context.Context, urlp string, target any) (int, error) {
 		return 0, fmt.Errorf("could not create request: %w", err)
 	}
 
-	req.Header.Set("Accept", "application/json, application/xml, text/xml")
+	req.Header.Set("Accept", "application/json")
 
-	seg := xray.BeginSegmentSec(req)
-
-	client := &http.Client{Timeout: 30 * time.Second}
-
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	resp, err := doRequest(defaultClient, req)
 	if err != nil {
 		return 0, fmt.Errorf("request failed: %w", err)
 	}
@@ -42,15 +74,8 @@ func GetWithContext(ctx context.Context, urlp string, target any) (int, error) {
 		return resp.StatusCode, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	contentType := resp.Header.Get("Content-Type")
-	if strings.Contains(contentType, "xml") {
-		if err := xml.NewDecoder(resp.Body).Decode(target); err != nil {
-			return resp.StatusCode, fmt.Errorf("%w: %w", ErrResponseDecode, err)
-		}
-	} else {
-		if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
-			return resp.StatusCode, fmt.Errorf("%w: %w", ErrResponseDecode, err)
-		}
+	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
+		return resp.StatusCode, fmt.Errorf("%w: %w", ErrResponseDecode, err)
 	}
 
 	return resp.StatusCode, nil
@@ -75,12 +100,7 @@ func PostWithContext(ctx context.Context, urlp string, body, target any) (int, e
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	seg := xray.BeginSegmentSec(req)
-
-	client := &http.Client{Timeout: 30 * time.Second}
-
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	resp, err := doRequest(defaultClient, req)
 	if err != nil {
 		return 0, fmt.Errorf("request failed: %w", err)
 	}
@@ -117,12 +137,7 @@ func PutWithContext(ctx context.Context, urlp string, body, target any) (int, er
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	seg := xray.BeginSegmentSec(req)
-
-	client := &http.Client{Timeout: 30 * time.Second}
-
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	resp, err := doRequest(defaultClient, req)
 	if err != nil {
 		return 0, fmt.Errorf("request failed: %w", err)
 	}
@@ -159,12 +174,7 @@ func PatchWithContext(ctx context.Context, urlp string, body, target any) (int, 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	seg := xray.BeginSegmentSec(req)
-
-	client := &http.Client{Timeout: 30 * time.Second}
-
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	resp, err := doRequest(defaultClient, req)
 	if err != nil {
 		return 0, fmt.Errorf("request failed: %w", err)
 	}
@@ -192,12 +202,7 @@ func DeleteWithContext(ctx context.Context, urlp string, target any) (int, error
 
 	req.Header.Set("Accept", "application/json")
 
-	seg := xray.BeginSegmentSec(req)
-
-	client := &http.Client{Timeout: 30 * time.Second}
-
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	resp, err := doRequest(defaultClient, req)
 	if err != nil {
 		return 0, fmt.Errorf("request failed: %w", err)
 	}

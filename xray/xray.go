@@ -29,29 +29,27 @@ var Method string
 func InitXRay() error {
 	parameterStore := beego.AppConfig.String("parameterStore")
 	if parameterStore == "" {
-		parameterStore = "preprod"
+		logs.Info("X-Ray no configurado")
+		return nil
 	}
 
 	daemonAddr, err := ssm.GetParameterFromParameterStore(context.Background(), "/"+parameterStore+"/utils/xray/DaemonAddr")
 	if err != nil {
-		logs.Error("error consultando daemon address: %v", err)
+		return fmt.Errorf("error consultando daemon address: %v", err)
 	}
 
-	err = xray.Configure(xray.Config{
-		DaemonAddr: daemonAddr,
-	})
-
-	if err != nil {
-		logs.Error("error configurando xray: %v", err)
+	config := xray.Config{DaemonAddr: daemonAddr}
+	if err := xray.Configure(config); err != nil {
+		return fmt.Errorf("error configurando xray: %v", err)
 	}
 
 	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelInfo))
 
 	logs.Info("X-Ray inicializado correctamente")
 
-	//Filtros X-Ray al inicio y fin de la ejecución de la API.
-	beego.InsertFilter("/:version/*", beego.BeforeExec, BeginSegment)
-	beego.InsertFilter("/:version/*", beego.AfterExec, EndSegment, false)
+	// Filtros X-Ray al inicio y fin de la ejecución de cada petición
+	beego.InsertFilter("/:version/*", beego.BeforeExec, BeginSegmentCtx)
+	beego.InsertFilter("/:version/*", beego.AfterExec, EndSegmentCtx, false)
 	return nil
 }
 
@@ -341,6 +339,80 @@ func UpdateSegment(resp *http.Response, err error, seg *xray.Segment) {
 	} else {
 		UpdateState(resp.StatusCode, err)
 	}
+}
+
+// BeginSegmentCtx es la versión concurrency-safe de BeginSegment para usar como
+// filtro BeforeExec de Beego. En lugar de escribir en variables globales, almacena
+// el segmento, la URL y el método en el contexto de la petición (ctx.Input.SetData)
+// de forma que cada goroutine opera sobre su propia copia aislada.
+func BeginSegmentCtx(ctx *context2.Context) {
+	host := ctx.Input.Context.Request.Host
+	if strings.HasPrefix(host, "localhost") {
+		return
+	}
+
+	url := host + ctx.Input.Context.Request.URL.String()
+	method := ctx.Request.Method
+
+	env := ""
+	if strings.HasPrefix(host, "pruebas") {
+		env = "_test"
+	}
+
+	reqCtx, seg := xray.BeginSegment(ctx.Request.Context(), appName+env)
+	seg.HTTP = &xray.HTTPData{
+		Request:  &xray.RequestData{Method: method, URL: url},
+		Response: &xray.ResponseData{Status: 0},
+	}
+
+	traceIDs := ctx.Request.Header.Values("X-Amzn-Trace-Id")
+	if len(traceIDs) > 0 {
+		id, parent := GetTraceIDAndParentID(strings.Trim(traceIDs[0], "[]"))
+		seg.TraceID = id
+		seg.ParentID = parent
+		ctx.ResponseWriter.Header().Set("Resp-X-Amzn-Trace-Id", "true")
+	}
+
+	ctx.Request = ctx.Request.WithContext(reqCtx)
+	ctx.Input.SetData("xray_seg", seg)
+	ctx.Input.SetData("xray_url", url)
+	ctx.Input.SetData("xray_method", method)
+}
+
+// EndSegmentCtx es la versión concurrency-safe de EndSegment para usar como
+// filtro AfterExec de Beego. Lee el segmento y los metadatos HTTP desde el
+// contexto de la petición en lugar de variables globales, actualiza el estado
+// final y cierra el segmento.
+func EndSegmentCtx(ctx *context2.Context) {
+	seg, ok := ctx.Input.GetData("xray_seg").(*xray.Segment)
+	if !ok || seg == nil {
+		return
+	}
+
+	url, _ := ctx.Input.GetData("xray_url").(string)
+	method, _ := ctx.Input.GetData("xray_method").(string)
+
+	status := ctx.ResponseWriter.Status
+	if jsonMap, ok := ctx.Input.GetData("json").(map[string]interface{}); ok {
+		if s, ok := jsonMap["Status"].(string); ok {
+			if num, err := strconv.Atoi(s); err == nil {
+				status = num
+			}
+		}
+	}
+
+	if status == 0 {
+		status = http.StatusOK
+	}
+
+	seg.HTTP = &xray.HTTPData{
+		Request:  &xray.RequestData{Method: method, URL: url},
+		Response: &xray.ResponseData{Status: status},
+	}
+	if status >= http.StatusInternalServerError {
+		_ = seg.AddError(fmt.Errorf("response status %d", status))
+	}
+	seg.Close(nil)
 }
 
 // Función creada para obtener el ID de la traza y del segmento principal
