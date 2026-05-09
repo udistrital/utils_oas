@@ -32,7 +32,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.5 // indirect
 	github.com/aws/smithy-go v1.24.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
@@ -56,11 +56,11 @@ require (
 	github.com/xuri/efp v0.0.0-20231025114914-d1ff6096ae53 // indirect
 	github.com/xuri/nfp v0.0.0-20230919160717-d98342af3f05 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	google.golang.org/genproto v0.0.0-20210114201628-6edceaf6022f // indirect
-	google.golang.org/grpc v1.64.1 // indirect
-	google.golang.org/protobuf v1.33.0 // indirect
+	google.golang.org/grpc v1.79.3 // indirect
+	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
