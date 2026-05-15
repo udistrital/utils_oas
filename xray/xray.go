@@ -2,6 +2,7 @@ package xray
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,49 +10,60 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego"
-	context2 "github.com/astaxie/beego/context"
+	beegoCtx "github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/logs"
+	"github.com/aws/aws-xray-sdk-go/v2/header"
 	"github.com/aws/aws-xray-sdk-go/v2/xray"
 	"github.com/aws/aws-xray-sdk-go/v2/xraylog"
 	"github.com/udistrital/utils_oas/ssm"
 )
 
-var GlobalContext context.Context
-var SegmentName string
 var appName = beego.AppConfig.String("appname")
-var StatusCode int
-var Seg *xray.Segment
-var URL string
-var Method string
 
-// InitXRay inicializa la configuración de X-Ray y configura los clientes necesarios.
-// Devuelve un error si ocurre algún error durante la inicialización.
+var globalCtx context.Context
+var globalSeg *xray.Segment
+var statusCode int
+var url string
+var method string
+
+func Init() {
+	if err := InitXRay(); err != nil {
+		logs.Error(err.Error())
+	}
+}
+
+// Deprecated. Use Init instead. This function is kept for backward compatibility
 func InitXRay() error {
+	if err := configureXRay(); err != nil {
+		return err
+	}
+
+	beego.InsertFilter("/:version/*", beego.BeforeExec, beginSegment)
+	beego.InsertFilter("/:version/*", beego.AfterExec, endSegment, false)
+	return nil
+}
+
+// configureXRay performs the core X-Ray initialization and configuration.
+// Returns an error if configuration fails, or nil if X-Ray is not configured or succeeds.
+func configureXRay() error {
 	parameterStore := beego.AppConfig.String("parameterStore")
 	if parameterStore == "" {
-		parameterStore = "preprod"
+		return fmt.Errorf("no se puede consultar daemon address: %v", errors.New("parameterStore no configurado"))
 	}
 
 	daemonAddr, err := ssm.GetParameterFromParameterStore(context.Background(), "/"+parameterStore+"/utils/xray/DaemonAddr")
 	if err != nil {
-		logs.Error("error consultando daemon address: %v", err)
+		return fmt.Errorf("error consultando daemon address: %v", err)
 	}
 
-	err = xray.Configure(xray.Config{
-		DaemonAddr: daemonAddr,
-	})
-
-	if err != nil {
-		logs.Error("error configurando xray: %v", err)
+	config := xray.Config{DaemonAddr: daemonAddr}
+	if err := xray.Configure(config); err != nil {
+		return fmt.Errorf("error configurando xray: %v", err)
 	}
 
 	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelInfo))
-
 	logs.Info("X-Ray inicializado correctamente")
 
-	//Filtros X-Ray al inicio y fin de la ejecución de la API.
-	beego.InsertFilter("/:version/*", beego.BeforeExec, BeginSegment)
-	beego.InsertFilter("/:version/*", beego.AfterExec, EndSegment, false)
 	return nil
 }
 
@@ -62,80 +74,81 @@ func InitXRay() error {
 // - ctx: objeto context de Beego
 //
 // Variables:
-// - SegmentName: nombre del segmento, equivalente al Host de la API.
 // - URL: URL de la petición.
-// - Method: Método de la petición.
-// - GlobalContext: Inicialización de un contexto vacío para almacenar los segmentos que se generen.
-// - Seg: Segmento principal de la Traza.
-func BeginSegment(ctx *context2.Context) {
-	SegmentName = ctx.Input.Context.Request.Host
-	if strings.HasPrefix(SegmentName, "localhost") {
-		Seg = nil
+// - method: Método de la petición.
+// - globalCtx: Inicialización de un contexto vacío para almacenar los segmentos que se generen.
+// - globalSeg: Segmento principal de la Traza.
+func beginSegment(ctx *beegoCtx.Context) {
+	host := ctx.Input.Context.Request.Host
+	if strings.HasPrefix(host, "localhost") {
+		globalSeg = nil
 		return
 	}
-	URL = "http://" + SegmentName + ctx.Input.Context.Request.URL.String()
-	Method = ctx.Request.Method
-	GlobalContext = context.Background()
-	Seg = BeginSegmentWithContextTP(StatusCode, ctx.Request.Header.Values("X-Amzn-Trace-Id"), ctx)
-}
 
-// Crea un nuevo subsegmento para seguimiento y lo completa con datos HTTP.
-//
-// Parámetros:
-// - subsegment: el nombre del subsegmento.
-// - method: el método HTTP utilizado en la solicitud.
-// - URL: la URL de la solicitud.
-// - status: el código de estado HTTP de la respuesta.
-//
-// Devoluciones:
-// - globalContext: el contexto global.
-// - subseg: el subsegmento recién creado.
-func BeginSubsegment(subsegment, method, URL string, status int) (context.Context, *xray.Segment) {
-	globalContext, subseg := xray.BeginSubsegment(GlobalContext, subsegment)
-	subseg.HTTP = &xray.HTTPData{
-		Request: &xray.RequestData{
-			Method: method,
-			URL:    URL,
-		},
-		Response: &xray.ResponseData{
-			Status: status,
-		},
+	url = "http://" + host + ctx.Input.Context.Request.URL.String()
+	method = ctx.Request.Method
+	env := ""
+	if strings.HasPrefix(host, "pruebas") {
+		env = "_test"
 	}
-	return globalContext, subseg
+
+	reqCtx, reqSeg := xray.BeginSegment(ctx.Request.Context(), appName+env)
+	reqSeg.HTTP = &xray.HTTPData{
+		Request:  &xray.RequestData{Method: method, URL: url},
+		Response: &xray.ResponseData{Status: 0},
+	}
+
+	traceID := ctx.Request.Header.Values("X-Amzn-Trace-Id")
+	if traceID != nil {
+		h := header.FromString(strings.Trim(traceID[0], "[]"))
+		reqSeg.TraceID = h.TraceID
+		reqSeg.ParentID = h.ParentID
+		ctx.ResponseWriter.Header().Set("Resp-X-Amzn-Trace-Id", "true")
+	}
+
+	ctx.Request = ctx.Request.WithContext(reqCtx)
+	ctx.Input.SetData("xray_seg", reqSeg)
+	ctx.Input.SetData("xray_url", url)
+	ctx.Input.SetData("xray_method", method)
+
+	globalCtx = reqCtx
+	globalSeg = reqSeg
 }
 
 // Actualiza y cierra el segmento principal y envía los datos del segmento y la traza a AWS X-Ray.
 //
 // Parámetros:
 // - ctx: puntero a objeto context de Beego
-func EndSegment(ctx *context2.Context) {
-	if Seg == nil {
+func endSegment(ctx *beegoCtx.Context) {
+	seg, ok := ctx.Input.GetData("xray_seg").(*xray.Segment)
+	if !ok || seg == nil {
 		return
 	}
-	// Obtener el valor de la clave "json" del contexto
-	jsonValue := ctx.Input.GetData("json")
-	// Convertir el valor a un mapa
-	if jsonMap, ok := jsonValue.(map[string]interface{}); ok {
-		// Obtiene el valor de la clave "Status" del mapa
-		status, ok := jsonMap["Status"].(string)
-		// Evalua si no hay errores al obtener el estado y actualiza los valores del segmento principal.
-		if ok {
-			num, err := strconv.Atoi(status)
-			if err == nil {
-				Seg.HTTP = &xray.HTTPData{
-					Request: &xray.RequestData{
-						Method: Method,
-						URL:    URL,
-					},
-					Response: &xray.ResponseData{
-						Status: num,
-					},
-				}
-			}
 
+	url, _ := ctx.Input.GetData("xray_url").(string)
+	method, _ := ctx.Input.GetData("xray_method").(string)
+
+	status := ctx.ResponseWriter.Status
+	if jsonMap, ok := ctx.Input.GetData("json").(map[string]interface{}); ok {
+		if s, ok := jsonMap["Status"].(string); ok {
+			if num, err := strconv.Atoi(s); err == nil {
+				status = num
+			}
 		}
 	}
-	Seg.Close(nil)
+
+	if status == 0 {
+		status = http.StatusOK
+	}
+
+	seg.HTTP = &xray.HTTPData{
+		Request:  &xray.RequestData{Method: method, URL: url},
+		Response: &xray.ResponseData{Status: status},
+	}
+	if status >= http.StatusInternalServerError {
+		_ = seg.AddError(fmt.Errorf("response status %d", status))
+	}
+	seg.Close(nil)
 }
 
 // Actualiza el estado del segmento principal con la respuesta de la petición.
@@ -145,22 +158,17 @@ func EndSegment(ctx *context2.Context) {
 // - status: el código de estado HTTP de la respuesta.
 // - err: el error generado en la petición.
 func UpdateState(status int, err error) {
-	if Seg == nil {
+	if globalSeg == nil {
 		return
 	}
-	StatusCode = status
-	Seg.HTTP = &xray.HTTPData{
-		Request: &xray.RequestData{
-			Method: Method,
-			URL:    URL,
-		},
-		Response: &xray.ResponseData{
-			Status: StatusCode,
-		},
+	statusCode = status
+	globalSeg.HTTP = &xray.HTTPData{
+		Request:  &xray.RequestData{Method: method, URL: url},
+		Response: &xray.ResponseData{Status: statusCode},
 	}
 	if status == http.StatusInternalServerError || status == http.StatusNotImplemented || status == http.StatusBadGateway || status == http.StatusServiceUnavailable {
-		_ = Seg.AddError(fmt.Errorf("%v", err))
-		Seg.Close(nil)
+		_ = globalSeg.AddError(fmt.Errorf("%v", err))
+		globalSeg.Close(nil)
 	}
 }
 
@@ -172,22 +180,18 @@ func UpdateState(status int, err error) {
 // - Agrega un error al segmento.
 // - Cierra el segmento.
 func ErrorController5xx(err error) {
-	if Seg == nil {
+	if globalSeg == nil {
 		return
 	}
-	StatusCode = 500
-	Seg.HTTP = &xray.HTTPData{
-		Request: &xray.RequestData{
-			Method: Method,
-			URL:    URL,
-		},
-		Response: &xray.ResponseData{
-			Status: StatusCode,
-		},
+
+	statusCode = 500
+	globalSeg.HTTP = &xray.HTTPData{
+		Request:  &xray.RequestData{Method: method, URL: url},
+		Response: &xray.ResponseData{Status: statusCode},
 	}
-	_ = Seg.AddMetadata("Error", err)
-	_ = Seg.AddError(fmt.Errorf("%v", err))
-	Seg.Close(nil)
+	_ = globalSeg.AddMetadata("Error", err)
+	_ = globalSeg.AddError(fmt.Errorf("%v", err))
+	globalSeg.Close(nil)
 }
 
 // Instrumenta la actualización del estado del segmento principal, cuando se obtiene una respuesta
@@ -199,63 +203,20 @@ func ErrorController5xx(err error) {
 // - status: el código de estado a actualizar.
 // - err: la información del error para agregar como metadatos.
 func EndSegmentErr(status int, err interface{}) {
-	if Seg == nil {
+	if globalSeg == nil {
 		return
 	}
-	if StatusCode != 500 && StatusCode != 501 && StatusCode != 502 && StatusCode != 503 {
-		StatusCode = status
-	}
-	Seg.HTTP = &xray.HTTPData{
-		Request: &xray.RequestData{
-			Method: Method,
-			URL:    URL,
-		},
-		Response: &xray.ResponseData{
-			Status: StatusCode,
-		},
-	}
-	_ = Seg.AddMetadata("Error", err)
-	Seg.Close(nil)
-}
 
-// Crea el segmento principal de la API con base en los parámetros de entrada y algunas variables
-// inicializadas previamente.
-// Con el parámetro "traceID" evalua si se trata de el segmento principal de la traza o de un segmento
-// secundario. En caso de serlo, lo relaciona con el segmento principal.
-//
-// Parámetros:
-// - code: un número entero que representa el código de estado de la respuesta del segmento.
-// - traceID: un segmento de cadenas que representa el ID de seguimiento del segmento.
-// - ctx: puntero a objeto context de Beego.
-//
-// Devoluciones:
-// - seg: puntero al segmento principal recién creado.
-func BeginSegmentWithContextTP(code int, traceID []string, ctx *context2.Context) *xray.Segment {
-	env := ""
-	if strings.HasPrefix(SegmentName, "pruebas") {
-		env = "_test"
+	if statusCode != 500 && statusCode != 501 && statusCode != 502 && statusCode != 503 {
+		statusCode = status
 	}
 
-	ctx2, seg := xray.BeginSegment(GlobalContext, appName+env)
-	GlobalContext = ctx2
-	seg.Origin = URL
-	seg.HTTP = &xray.HTTPData{
-		Request: &xray.RequestData{
-			Method: Method,
-			URL:    URL,
-		},
-		Response: &xray.ResponseData{
-			Status: code,
-		},
+	globalSeg.HTTP = &xray.HTTPData{
+		Request:  &xray.RequestData{Method: method, URL: url},
+		Response: &xray.ResponseData{Status: statusCode},
 	}
-	if traceID != nil {
-		traceID := strings.Trim(traceID[0], "[]")
-		id, parent := GetTraceIDAndParentID(traceID)
-		seg.TraceID = id
-		seg.ParentID = parent
-		ctx.ResponseWriter.Header().Set("Resp-X-Amzn-Trace-Id", "true")
-	}
-	return seg
+	_ = globalSeg.AddMetadata("Error", err)
+	globalSeg.Close(nil)
 }
 
 // Función creada para la creación de segmentos secundarios desde el API principal, que realizan
@@ -269,24 +230,21 @@ func BeginSegmentWithContextTP(code int, traceID []string, ctx *context2.Context
 // Devoluciones:
 // - seg: puntero al segmento secundario recién creado.
 func BeginSegmentSec(req *http.Request) *xray.Segment {
-	if Seg == nil {
+	if globalSeg == nil {
 		return nil
 	}
-	req.Header.Set("X-Amzn-Trace-Id", Seg.DownstreamHeader().String())
-	_, seg := xray.BeginSegment(GlobalContext, req.Host)
+
+	req.Header.Set("X-Amzn-Trace-Id", globalSeg.DownstreamHeader().String())
+	_, seg := xray.BeginSegment(globalCtx, req.Host)
 	seg.Lock()
-	seg.Origin = URL
+	seg.Origin = url
 	seg.HTTP = &xray.HTTPData{
-		Request: &xray.RequestData{
-			Method: req.Method,
-			URL:    req.URL.String(),
-		},
-		Response: &xray.ResponseData{
-			Status: 200,
-		},
+		Request:  &xray.RequestData{Method: req.Method, URL: req.URL.String()},
+		Response: &xray.ResponseData{Status: 0},
 	}
-	seg.TraceID = Seg.TraceID
-	seg.ParentID = Seg.ID
+
+	seg.TraceID = globalSeg.TraceID
+	seg.ParentID = globalSeg.ID
 	seg.Unlock()
 	return seg
 }
@@ -340,25 +298,5 @@ func UpdateSegment(resp *http.Response, err error, seg *xray.Segment) {
 		ErrorController5xx(err)
 	} else {
 		UpdateState(resp.StatusCode, err)
-	}
-}
-
-// Función creada para obtener el ID de la traza y del segmento principal
-func GetTraceIDAndParentID(traceID string) (trace string, parent string) {
-	if traceID != "" {
-		traceIDParts := strings.Split(traceID, ";")
-		Id := ""
-		IdParent := ""
-		for _, part := range traceIDParts {
-			if strings.HasPrefix(part, "Root=") {
-				Id = strings.TrimPrefix(part, "Root=")
-			}
-			if strings.HasPrefix(part, "Parent=") {
-				IdParent = strings.TrimPrefix(part, "Parent=")
-			}
-		}
-		return Id, IdParent
-	} else {
-		return
 	}
 }
