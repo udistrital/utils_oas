@@ -9,55 +9,42 @@ import (
 	"strings"
 	"time"
 
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/udistrital/utils_oas/xray"
 )
 
 var global string
+var defClient = &http.Client{}
 
 func SendJson(urlp string, trequest string, target interface{}, datajson interface{}) error {
 	b := new(bytes.Buffer)
 	if datajson != nil {
 		if err := json.NewEncoder(b).Encode(datajson); err != nil {
-			beego.Error(err)
+			logs.Error(err)
+			return err
 		}
 	}
 
-	client := &http.Client{}
 	req, err := http.NewRequest(trequest, urlp, b)
-	seg := xray.BeginSegmentSec(req)
-	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
-
-	//try
-	header := GetHeader()
-	req.Header.Set("Authorization", header)
-	req.Header.Set("Accept", AppJson)
-	req.Header.Add("Content-Type", AppJson)
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
 	if err != nil {
-		beego.Error("Error reading response. ", err)
+		logs.Error(err)
 		return err
 	}
-	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
-	defer func() {
-		//Catch
-		if r := recover(); r != nil {
-			client := &http.Client{}
-			resp, err := client.Do(req)
-			xray.UpdateSegment(resp, err, seg)
-			if err != nil {
-				beego.Error("Error reading response. ", err)
-			}
 
-			defer resp.Body.Close()
-			json.NewDecoder(resp.Body).Decode(target)
-		}
-	}()
+	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
+	req.Header.Set(authorizationKey, GetHeader())
+	req.Header.Set(acceptHeader, contentTypeJSON)
+	req.Header.Set(contentTypeKey, contentTypeJSON)
+
+	resp, err := execRequest(defClient, req)
+	if err != nil {
+		logs.Error("Error reading response. ", err)
+		return err
+	}
+
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			beego.Error(err)
+			logs.Error(err)
 		}
 	}()
 	return json.NewDecoder(resp.Body).Decode(target)
@@ -67,53 +54,29 @@ func SendJson2(url string, trequest string, target interface{}, datajson interfa
 	b := new(bytes.Buffer)
 	if datajson != nil {
 		if err := json.NewEncoder(b).Encode(datajson); err != nil {
-			beego.Error(err)
+			logs.Error(err)
+			return err
 		}
 	}
 
-	client := &http.Client{}
-	req, _ := http.NewRequest(trequest, url, b)
-	seg := xray.BeginSegmentSec(req)
-	defer func() {
-		//Catch
-		if r := recover(); r != nil {
-			client := &http.Client{}
-			resp, err := client.Do(req)
-			xray.UpdateSegment(resp, err, seg)
-			if err != nil {
-				beego.Error("Error reading response. ", err)
-			}
-
-			defer resp.Body.Close()
-			mensaje, err := io.ReadAll(resp.Body)
-			if err != nil {
-				beego.Error("Error converting response. ", err)
-			}
-			bodyreq, err := io.ReadAll(req.Body)
-			if err != nil {
-				beego.Error("Error converting response. ", err)
-			}
-			respuesta := map[string]interface{}{"request": map[string]interface{}{"url": req.URL.String(), "header": req.Header, "body": bodyreq}, "body": mensaje, "statusCode": resp.StatusCode, "status": resp.Status}
-			e, err := json.Marshal(respuesta)
-			if err != nil {
-				logs.Error(err)
-			}
-			json.Unmarshal(e, &target)
-		}
-	}()
-
-	req.Header.Set("Authorization", "")
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Set("accept", "*/*")
-	r, err := client.Do(req)
-	xray.UpdateSegment(r, err, seg)
+	req, err := http.NewRequest(trequest, url, b)
 	if err != nil {
-		beego.Error("error", err)
+		logs.Error(err)
+		return err
+	}
+
+	req.Header.Set(authorizationKey, "")
+	req.Header.Set(contentTypeKey, "application/json; charset=UTF-8")
+	req.Header.Set(acceptHeader, "*/*")
+
+	r, err := execRequest(defClient, req)
+	if err != nil {
+		logs.Error("error", err)
 		return err
 	}
 	defer func() {
 		if err := r.Body.Close(); err != nil {
-			beego.Error(err)
+			logs.Error(err)
 		}
 	}()
 
@@ -127,56 +90,44 @@ func SendJsonEscapeUnicode(urlp string, trequest string, target interface{}, dat
 		e.SetEscapeHTML(false)
 		e.Encode(datajson)
 	}
-	//proxyUrl, err := url.Parse("http://10.20.4.15:3128")
-	//http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
 
-	client := &http.Client{}
 	req, err := http.NewRequest(trequest, urlp, b)
-	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
-	defer func() {
-		//Catch
-		if r := recover(); r != nil {
-
-			client := &http.Client{}
-			resp, err := client.Do(req)
-			if err != nil {
-				beego.Error("Error reading response. ", err)
-			}
-
-			defer resp.Body.Close()
-			json.NewDecoder(resp.Body).Decode(target)
-		}
-	}()
-
-	//try
-	header := GetHeader()
-	req.Header.Set("Authorization", header)
-	seg := xray.BeginSegmentSec(req)
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
 	if err != nil {
-		beego.Error("Error reading response. ", err)
+		logs.Error(err)
+		return err
 	}
 
-	defer resp.Body.Close()
+	req.Header.Set(authorizationKey, GetHeader())
+
+	resp, err := execRequest(defClient, req)
+	if err != nil {
+		logs.Error("Error reading response. ", err)
+		return err
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logs.Error(err)
+		}
+	}()
 	return json.NewDecoder(resp.Body).Decode(target)
 }
 
 func GetJsonWSO2(urlp string, target interface{}) error {
 	b := new(bytes.Buffer)
-	client := &http.Client{}
 	req, err := http.NewRequest("GET", urlp, b)
-	req.Header.Set("Accept", AppJson)
-	seg := xray.BeginSegmentSec(req)
-	r, err := client.Do(req)
-	xray.UpdateSegment(r, err, seg)
 	if err != nil {
-		beego.Error("error", err)
+		logs.Error(err)
+		return err
+	}
+	req.Header.Set(acceptHeader, contentTypeJSON)
+	r, err := execRequest(defClient, req)
+	if err != nil {
+		logs.Error("error", err)
 		return err
 	}
 	defer func() {
 		if err := r.Body.Close(); err != nil {
-			beego.Error(err)
+			logs.Error(err)
 		}
 	}()
 
@@ -185,108 +136,98 @@ func GetJsonWSO2(urlp string, target interface{}) error {
 
 func GetJsonWSO2Test(urlp string, target interface{}) (status int, err error) {
 	b := new(bytes.Buffer)
-	req, _ := http.NewRequest("GET", urlp, b)
-	req.Header.Set("Accept", AppJson)
-	seg := xray.BeginSegmentSec(req)
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	req, err := http.NewRequest("GET", urlp, b)
 	if err != nil {
-		beego.Error("error", err)
-		return resp.StatusCode, err
+		logs.Error(err)
+		return 0, err
+	}
+	req.Header.Set(acceptHeader, contentTypeJSON)
+	resp, err := execRequest(defClient, req)
+	if err != nil {
+		logs.Error("error", err)
+		return 0, err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			beego.Error(nil, err)
+			logs.Error(err)
 		}
 	}()
 	return resp.StatusCode, json.NewDecoder(resp.Body).Decode(target)
 }
+
 func GetJson(urlp string, target interface{}) error {
 	req, err := http.NewRequest("GET", urlp, nil)
 	if err != nil {
-		beego.Error("Error reading request. ", err)
-	}
-	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
-	seg := xray.BeginSegmentSec(req)
-	header := GetHeader()
-	req.Header.Set("Authorization", header)
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
-	if err != nil {
-		beego.Error("Error reading response. ", err)
+		logs.Error("Error reading request. ", err)
 		return err
 	}
-	//Se intenta acceder a cabecera, si no existe, se realiza peticion normal.
-	defer func() {
-		//Catch
-		if r := recover(); r != nil {
-			client := &http.Client{}
-			resp, err := client.Do(req)
-			xray.UpdateSegment(resp, err, seg)
-			if err != nil {
-				beego.Error("Error reading response. ", err)
-			}
-			defer resp.Body.Close()
-			json.NewDecoder(resp.Body).Decode(target)
-		}
-	}()
+
+	req.Header.Set(authorizationKey, GetHeader())
+
+	resp, err := execRequest(defClient, req)
+	if err != nil {
+		logs.Error("Error reading response. ", err)
+		return err
+	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			beego.Error(err)
+			logs.Error(err)
 		}
 	}()
 	return json.NewDecoder(resp.Body).Decode(target)
 }
 
 func GetJsonTest(url string, target interface{}) (*http.Response, error) {
-	req, _ := http.NewRequest("GET", url, nil)
-	seg := xray.BeginSegmentSec(req)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		logs.Error(err)
+		return nil, err
+	}
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	resp, err := execRequest(client, req)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			beego.Error(err)
+			logs.Error(err)
 		}
 	}()
 	return resp, json.NewDecoder(resp.Body).Decode(target)
 }
 
 func GetJsonTest2(url string, target interface{}) (status int, err error) {
-	req, _ := http.NewRequest("GET", url, nil)
-	seg := xray.BeginSegmentSec(req)
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return resp.StatusCode, err
+		logs.Error(err)
+		return 0, err
+	}
+	resp, err := execRequest(defClient, req)
+	if err != nil {
+		return 0, err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			beego.Error(err)
+			logs.Error(err)
 		}
 	}()
 	return resp.StatusCode, json.NewDecoder(resp.Body).Decode(target)
 }
 
 func GetXml(url string, target interface{}) error {
-	req, _ := http.NewRequest("GET", url, nil)
-	seg := xray.BeginSegmentSec(req)
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		beego.Error("Error reading response. ", err)
+		logs.Error(err)
+		return err
+	}
+	resp, err := execRequest(defClient, req)
+	if err != nil {
+		logs.Error("Error reading response. ", err)
 		return err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			beego.Error(err)
+			logs.Error(err)
 		}
 	}()
 	return xml.NewDecoder(resp.Body).Decode(target)
@@ -295,27 +236,29 @@ func GetXml(url string, target interface{}) error {
 func GetXML2String(url string, target interface{}) string {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		beego.Error("Error reading request. ", err)
+		logs.Error("Error reading request. ", err)
+		return ""
 	}
 
-	client := &http.Client{}
-	seg := xray.BeginSegmentSec(req)
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	resp, err := execRequest(defClient, req)
 	if err != nil {
-		beego.Error("Error reading response. ", err)
+		logs.Error("Error reading response. ", err)
+		return ""
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logs.Error(err)
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		beego.Error("Error reading response. ", err)
+		logs.Error("Error reading response. ", err)
+		return ""
 	}
 
-	print(body)
-	print(string(body))
-	s := strings.TrimSpace(string(body))
-	return s
+	return strings.TrimSpace(string(body))
 }
 
 func SetHeader(h string) {
@@ -324,4 +267,14 @@ func SetHeader(h string) {
 
 func GetHeader() (h string) {
 	return global
+}
+
+// execRequest executes req using the provided HTTP client, wrapping the call
+// with an X-Ray subsegment via the local xray package.
+// The caller is responsible for closing resp.Body on success.
+func execRequest(client *http.Client, req *http.Request) (*http.Response, error) {
+	seg := xray.BeginSegmentSec(req)
+	resp, err := client.Do(req)
+	xray.UpdateSegment(resp, err, seg)
+	return resp, err
 }
