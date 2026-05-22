@@ -18,8 +18,15 @@ import (
 	"github.com/udistrital/utils_oas/ssm"
 )
 
-var appName = beego.AppConfig.String("appname")
+type contextKey string
 
+const (
+	segmentKey contextKey = "xray_seg"
+	urlKey     contextKey = "xray_url"
+	methodKey  contextKey = "xray_method"
+)
+
+var appName = beego.AppConfig.String("appname")
 var globalCtx context.Context
 var globalSeg *xray.Segment
 var statusCode int
@@ -85,8 +92,8 @@ func beginSegment(ctx *beegoCtx.Context) {
 		return
 	}
 
-	url = "http://" + host + ctx.Input.Context.Request.URL.String()
-	method = ctx.Request.Method
+	reqURL := ctx.Input.Scheme() + "://" + host + ctx.Input.Context.Request.URL.String()
+	reqMethod := ctx.Request.Method
 	env := ""
 	if strings.HasPrefix(host, "pruebas") {
 		env = "_test"
@@ -94,7 +101,7 @@ func beginSegment(ctx *beegoCtx.Context) {
 
 	reqCtx, reqSeg := xray.BeginSegment(ctx.Request.Context(), appName+env)
 	reqSeg.HTTP = &xray.HTTPData{
-		Request:  &xray.RequestData{Method: method, URL: url},
+		Request:  &xray.RequestData{Method: reqMethod, URL: reqURL},
 		Response: &xray.ResponseData{Status: 0},
 	}
 
@@ -106,11 +113,13 @@ func beginSegment(ctx *beegoCtx.Context) {
 		ctx.ResponseWriter.Header().Set("Resp-X-Amzn-Trace-Id", "true")
 	}
 
+	reqCtx = context.WithValue(reqCtx, segmentKey, reqSeg)
+	reqCtx = context.WithValue(reqCtx, urlKey, reqURL)
+	reqCtx = context.WithValue(reqCtx, methodKey, reqMethod)
 	ctx.Request = ctx.Request.WithContext(reqCtx)
-	ctx.Input.SetData("xray_seg", reqSeg)
-	ctx.Input.SetData("xray_url", url)
-	ctx.Input.SetData("xray_method", method)
 
+	url = reqURL
+	method = reqMethod
 	globalCtx = reqCtx
 	globalSeg = reqSeg
 }
@@ -120,13 +129,13 @@ func beginSegment(ctx *beegoCtx.Context) {
 // Parámetros:
 // - ctx: puntero a objeto context de Beego
 func endSegment(ctx *beegoCtx.Context) {
-	seg, ok := ctx.Input.GetData("xray_seg").(*xray.Segment)
+	seg, ok := ctx.Request.Context().Value(segmentKey).(*xray.Segment)
 	if !ok || seg == nil {
 		return
 	}
 
-	url, _ := ctx.Input.GetData("xray_url").(string)
-	method, _ := ctx.Input.GetData("xray_method").(string)
+	url, _ := ctx.Request.Context().Value(urlKey).(string)
+	method, _ := ctx.Request.Context().Value(methodKey).(string)
 
 	status := ctx.ResponseWriter.Status
 	if jsonMap, ok := ctx.Input.GetData("json").(map[string]interface{}); ok {
