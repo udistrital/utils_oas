@@ -12,6 +12,14 @@ import (
 	"github.com/aws/aws-xray-sdk-go/v2/xray"
 )
 
+const (
+	authorizationKey = "Authorization"
+	contentTypeKey   = "Content-Type"
+	acceptHeader     = "Accept"
+	traceIDKey       = "X-Amzn-Trace-Id"
+	contentTypeJSON  = "application/json"
+)
+
 var ErrResponseDecode = errors.New("response body could not be decoded into target")
 
 var defaultClient = &http.Client{Timeout: 30 * time.Second}
@@ -19,33 +27,38 @@ var defaultClient = &http.Client{Timeout: 30 * time.Second}
 // doRequest executes req using the provided HTTP client, wrapping the call with
 // an X-Ray subsegment scoped to the request's context. The caller is
 // responsible for closing resp.Body.
+// If the context carries an Authorization value (via WithAuthorization), it is forwarded.
 func doRequest(client *http.Client, req *http.Request) (*http.Response, error) {
-	ctx, subseg := xray.BeginSubsegment(req.Context(), req.Host)
-	if subseg != nil {
+	ctx := req.Context()
+	var subseg *xray.Segment
+
+	req.Header.Set(acceptHeader, contentTypeJSON)
+	if token, ok := ctx.Value(authorizationKey).(string); ok && token != "" {
+		req.Header.Set(authorizationKey, token)
+	}
+
+	if xray.GetSegment(ctx) != nil {
+		ctx, subseg = xray.BeginSubsegment(ctx, req.Host)
 		subseg.HTTP = &xray.HTTPData{
 			Request: &xray.RequestData{
 				Method: req.Method,
 				URL:    req.URL.String(),
 			},
-			Response: &xray.ResponseData{Status: 200},
+			Response: &xray.ResponseData{Status: http.StatusOK},
 		}
-	}
-	if seg := xray.GetSegment(req.Context()); seg != nil {
-		req.Header.Set("X-Amzn-Trace-Id", seg.DownstreamHeader().String())
+		if seg := xray.GetSegment(ctx); seg != nil {
+			req.Header.Set(traceIDKey, seg.DownstreamHeader().String())
+		}
 	}
 
 	resp, err := client.Do(req.WithContext(ctx))
 
 	if subseg != nil {
-		var status int
+		status := 0
 		if err != nil {
-			status = http.StatusInternalServerError
 			_ = subseg.AddError(err)
 		} else {
 			status = resp.StatusCode
-			if resp.Header.Get("Resp-X-Amzn-Trace-Id") != "" {
-				subseg.Sampled = false
-			}
 		}
 		subseg.HTTP.Response = &xray.ResponseData{Status: status}
 		subseg.Close(nil)
@@ -60,8 +73,6 @@ func GetWithContext(ctx context.Context, urlp string, target any) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("could not create request: %w", err)
 	}
-
-	req.Header.Set("Accept", "application/json")
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
@@ -97,8 +108,7 @@ func PostWithContext(ctx context.Context, urlp string, body, target any) (int, e
 		return 0, fmt.Errorf("could not create request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set(contentTypeKey, contentTypeJSON)
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
@@ -134,8 +144,7 @@ func PutWithContext(ctx context.Context, urlp string, body, target any) (int, er
 		return 0, fmt.Errorf("could not create request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set(contentTypeKey, contentTypeJSON)
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
@@ -171,8 +180,7 @@ func PatchWithContext(ctx context.Context, urlp string, body, target any) (int, 
 		return 0, fmt.Errorf("could not create request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set(contentTypeKey, contentTypeJSON)
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
@@ -199,8 +207,6 @@ func DeleteWithContext(ctx context.Context, urlp string, target any) (int, error
 	if err != nil {
 		return 0, fmt.Errorf("could not create request: %w", err)
 	}
-
-	req.Header.Set("Accept", "application/json")
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
