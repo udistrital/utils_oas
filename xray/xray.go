@@ -20,6 +20,14 @@ import (
 
 var appName = beego.AppConfig.String("appname")
 
+type contextKey string
+
+const (
+	segmentKey contextKey = "xray_seg"
+	urlKey     contextKey = "xray_url"
+	methodKey  contextKey = "xray_method"
+)
+
 var globalCtx context.Context
 var globalSeg *xray.Segment
 var statusCode int
@@ -106,10 +114,10 @@ func beginSegment(ctx *beegoCtx.Context) {
 		ctx.ResponseWriter.Header().Set("Resp-X-Amzn-Trace-Id", "true")
 	}
 
+	reqCtx = context.WithValue(reqCtx, segmentKey, reqSeg)
+	reqCtx = context.WithValue(reqCtx, urlKey, url)
+	reqCtx = context.WithValue(reqCtx, methodKey, method)
 	ctx.Request = ctx.Request.WithContext(reqCtx)
-	ctx.Input.SetData("xray_seg", reqSeg)
-	ctx.Input.SetData("xray_url", url)
-	ctx.Input.SetData("xray_method", method)
 
 	globalCtx = reqCtx
 	globalSeg = reqSeg
@@ -120,13 +128,13 @@ func beginSegment(ctx *beegoCtx.Context) {
 // Parámetros:
 // - ctx: puntero a objeto context de Beego
 func endSegment(ctx *beegoCtx.Context) {
-	seg, ok := ctx.Input.GetData("xray_seg").(*xray.Segment)
+	seg, ok := ctx.Request.Context().Value(segmentKey).(*xray.Segment)
 	if !ok || seg == nil {
 		return
 	}
 
-	url, _ := ctx.Input.GetData("xray_url").(string)
-	method, _ := ctx.Input.GetData("xray_method").(string)
+	url, _ := ctx.Request.Context().Value(urlKey).(string)
+	method, _ := ctx.Request.Context().Value(methodKey).(string)
 
 	status := ctx.ResponseWriter.Status
 	if jsonMap, ok := ctx.Input.GetData("json").(map[string]interface{}); ok {

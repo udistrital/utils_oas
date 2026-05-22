@@ -1,174 +1,164 @@
 package auditoria
 
 import (
-	"fmt"
-	"time"
-
+	"context"
 	"encoding/json"
-
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/context"
-	"github.com/astaxie/beego/logs"
-	"github.com/astaxie/beego/orm"
-	"github.com/patrickmn/go-cache"
-
+	"fmt"
 	"regexp"
 	"strings"
+	"sync"
+	"time"
+
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/cache"
+	beegoCtx "github.com/astaxie/beego/context"
+	"github.com/astaxie/beego/logs"
+	"github.com/astaxie/beego/orm"
+	"github.com/udistrital/utils_oas/request"
 )
 
-type Usuario struct {
-	Sub  string `json:"sub"`
-	Date time.Time
+const (
+	authorizationKey = "Authorization"
+	userKey          = "user"
+)
+
+var appName = beego.AppConfig.String("appname")
+var c cache.Cache
+
+type usuario struct {
+	Documento          string `json:"documento"`
+	DocumentoCompuesto string `json:"documento_compuesto"`
+	Email              string `json:"email"`
+	Role               string `json:"role"`
+	Sub                string `json:"sub"`
 }
 
-var userMap = make(map[string]string)
-var c = cache.New(60*time.Minute, 10*time.Minute)
-
-func getUserInfo2(ctx *context.Context) (u string) {
-	var usuario Usuario
-
-	if val, ok := userMap[ctx.Request.Header["Authorization"][0]]; ok {
-		return val
-	} else {
-		if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
-			userMap[ctx.Request.Header["Authorization"][0]] = usuario.Sub
-			return usuario.Sub
-		} else {
-			userMap[ctx.Request.Header["Authorization"][0]] = "No user"
-			return "No user"
-		}
-	}
+type requestLog struct {
+	AppName      string         `json:"app_name"`
+	Agent        string         `json:"agent,omitempty"`
+	Data         map[string]any `json:"data"`
+	Date         string         `json:"date"`
+	Host         string         `json:"host"`
+	IPUser       string         `json:"ip_user"`
+	Method       string         `json:"method"`
+	Path         string         `json:"path"`
+	Query        string         `json:"query,omitempty"`
+	Schema       string         `json:"schema,omitempty"`
+	SQLStatement string         `json:"sql_statement,omitempty"`
+	User         string         `json:"user"`
 }
 
-func getUserInfo(ctx *context.Context) (u string) {
-	var usuario Usuario
-	if x, found := c.Get(ctx.Request.Header["Authorization"][0]); found {
-		foo := x.(string)
-		return foo
-	} else {
-		if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
-			c.Set(ctx.Request.Header["Authorization"][0], usuario.Sub, cache.DefaultExpiration)
-			return usuario.Sub
-
-		} else {
-			c.Set(ctx.Request.Header["Authorization"][0], "No user", cache.DefaultExpiration)
-			return "No user"
-		}
-	}
-}
-
-func ListenRequest(logger *customSQLLogger) func(ctx *context.Context) {
-	return func(ctx *context.Context) {
-		if ctx.Request.URL.String() == "/" {
-			return
-		}
-
-		sqlQuery := logger.GetLastQuery()
-		if sqlQuery == "" {
-			sqlQuery = "No se registró sentencia SQL"
-		}
-
-		defer func() {
-			if r := recover(); r != nil {
-				logData := map[string]interface{}{
-					"app_name":   beego.AppConfig.String("appname"),
-					"host":       ctx.Request.Host,
-					"end_point":  ctx.Request.URL.String(),
-					"method":     ctx.Request.Method,
-					"date":       time.Now().Format(time.RFC3339),
-					"sql_orm":    sqlQuery,
-					"ip_user":    ctx.Input.IP(),
-					"user_agent": getUserAgent(ctx),
-					"user":       "Error WSO2",
-					"data":       sanitizeInputData(ctx.Input.Data()),
-				}
-				logAsJSON(logData)
-			}
-		}()
-
-		user := getUserInfo(ctx)
-
-		logData := map[string]interface{}{
-			"app_name":   beego.AppConfig.String("appname"),
-			"host":       ctx.Request.Host,
-			"end_point":  ctx.Request.URL.String(),
-			"method":     ctx.Request.Method,
-			"date":       time.Now().Format(time.RFC3339),
-			"sql_orm":    sqlQuery,
-			"ip_user":    ctx.Input.IP(),
-			"user_agent": getUserAgent(ctx),
-			"user":       user,
-			"data":       sanitizeInputData(ctx.Input.Data()),
-		}
-
-		logAsJSON(logData)
-	}
-}
-
-func logAsJSON(data map[string]interface{}) {
-
-	jsonData, err := json.Marshal(data["data"])
-	if err != nil {
-		beego.Error("Error al serializar el campo 'data' a JSON:", err)
-		jsonData = []byte("{}")
-	}
-
-	var pruebaLog = "{app_name: " + data["app_name"].(string) +
-		", host: " + data["host"].(string) +
-		", end_point: " + data["end_point"].(string) +
-		", method: " + data["method"].(string) +
-		", date: " + data["date"].(string) +
-		", sql_orm: {" + data["sql_orm"].(string) +
-		"}, ip_user: " + data["ip_user"].(string) +
-		", user_agent: " + data["user_agent"].(string) +
-		", user: " + data["user"].(string) +
-		", data: " + string(jsonData) +
-		"}"
-
-	logs.Info(pruebaLog)
-}
-
-func sanitizeInputData(input interface{}) interface{} {
-	if data, ok := input.(map[interface{}]interface{}); ok {
-		converted := make(map[string]interface{})
-		for key, value := range data {
-			converted[fmt.Sprintf("%v", key)] = value
-		}
-		return converted
-	}
-	return input
-}
-
-func getUserAgent(ctx *context.Context) string {
-	if len(ctx.Request.Header["User-Agent"]) > 0 {
-		return ctx.Request.Header["User-Agent"][0]
-	}
-	return "Desconocido"
-}
-
-func InitMiddleware() {
-	customLogger := &customSQLLogger{}
-	orm.DebugLog = orm.NewLog(customLogger)
-
-	logs.Info("middleware inicializado correctamente.")
-	beego.InsertFilter("*", beego.AfterExec, ListenRequest(customLogger), false)
-}
-
+// customSQLLogger intercepts beego ORM debug output to capture the last executed
+// SQL statement for audit logging.
+//
+// NOTE: beego v1's ORM logger is global — there is no way to associate a query
+// with a specific request. As a result this implementation captures only the
+// last query written globally, which is inaccurate under concurrent load.
+// A mutex makes reads/writes race-safe, but the value may still belong to a
+// different request.
+//
+// With beego v2 this is properly solvable: use orm.AddGlobalFilterChain with
+// an orm.Filter that receives the context.Context, and store queries per-request
+// using context.WithValue. Handlers must call o.WithContext(ctx) for the
+// association to work.
 type customSQLLogger struct {
+	mu        sync.Mutex
 	lastQuery string
 }
 
-func (l *customSQLLogger) Write(p []byte) (n int, err error) {
+func InitMiddleware() {
+	var err error
+	c, err = cache.NewCache("memory", `{"interval":300}`)
+	if err != nil {
+		logs.Error("error al inicializar el cache:", err)
+		return
+	}
+
+	customLogger := &customSQLLogger{}
+	orm.DebugLog = orm.NewLog(customLogger)
+	logs.Info("middleware inicializado correctamente.")
+
+	beego.InsertFilter("/:version/*", beego.BeforeExec, validateAndSetAuth, false)
+	beego.InsertFilter("/:version/*", beego.AfterExec, logRequest(customLogger), false)
+}
+
+func validateAndSetAuth(ctx *beegoCtx.Context) {
+	token := ctx.Request.Header.Get("Authorization")
+	if token == "" {
+		return
+	}
+
+	reqCtx := context.WithValue(ctx.Request.Context(), authorizationKey, token)
+	if sub, ok := c.Get(token).(string); ok && sub != "" {
+		ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, sub))
+		return
+	}
+
+	var user usuario
+	if _, err := request.GetWithContext(reqCtx, "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &user); err != nil {
+		logs.Error("error al validar el token:", err)
+		return
+	}
+
+	c.Put(token, user.Sub, 60*time.Minute)
+	ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, user.Sub))
+}
+
+func logRequest(logger *customSQLLogger) func(ctx *beegoCtx.Context) {
+	return func(ctx *beegoCtx.Context) {
+		user, _ := ctx.Request.Context().Value(userKey).(string)
+
+		entry := requestLog{
+			AppName:      appName,
+			Agent:        ctx.Request.Header.Get("User-Agent"),
+			Data:         sanitizeInputData(ctx.Input.Data()),
+			Date:         time.Now().Format(time.RFC3339),
+			Host:         ctx.Request.Host,
+			IPUser:       ctx.Input.IP(),
+			Method:       ctx.Request.Method,
+			Path:         ctx.Request.URL.Path,
+			Query:        ctx.Request.URL.RawQuery,
+			Schema:       ctx.Input.Scheme(),
+			SQLStatement: logger.GetLastQuery(),
+			User:         user,
+		}
+
+		if jsonData, err := json.Marshal(entry); err != nil {
+			logs.Error("error al serializar log a JSON:", err)
+		} else {
+			logs.Info(string(jsonData))
+		}
+	}
+}
+
+func sanitizeInputData(input any) map[string]any {
+	switch data := input.(type) {
+	case map[string]any:
+		return data
+	case map[any]any:
+		converted := make(map[string]any, len(data))
+		for k, v := range data {
+			converted[fmt.Sprintf("%v", k)] = v
+		}
+		return converted
+	}
+	return nil
+}
+func (l *customSQLLogger) Write(p []byte) (int, error) {
 	logMessage := string(p)
 
 	re := regexp.MustCompile(`\[(SELECT|INSERT|UPDATE|DELETE).*`)
 	match := re.FindString(logMessage)
+
+	l.mu.Lock()
 	l.lastQuery = match
+	l.mu.Unlock()
 
 	return len(p), nil
 }
 
 func (l *customSQLLogger) GetLastQuery() string {
-	query := strings.TrimSpace(l.lastQuery)
-	return query
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return strings.TrimSpace(l.lastQuery)
 }
