@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 
 	"github.com/astaxie/beego"
+	beegoCache "github.com/astaxie/beego/cache"
 	"github.com/astaxie/beego/context"
 	"github.com/astaxie/beego/orm"
-	"github.com/patrickmn/go-cache"
 
 	//"log"
 	"regexp"
@@ -22,7 +22,7 @@ type Usuario struct {
 }
 
 var userMap = make(map[string]string)
-var c = cache.New(60*time.Minute, 10*time.Minute)
+var c beegoCache.Cache
 
 func getUserInfo2(ctx *context.Context) (u string) {
 	var usuario Usuario
@@ -42,19 +42,16 @@ func getUserInfo2(ctx *context.Context) (u string) {
 
 func getUserInfo(ctx *context.Context) (u string) {
 	var usuario Usuario
-	if x, found := c.Get(ctx.Request.Header["Authorization"][0]); found {
-		foo := x.(string)
-		return foo
-	} else {
-		if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
-			c.Set(ctx.Request.Header["Authorization"][0], usuario.Sub, cache.DefaultExpiration)
-			return usuario.Sub
-
-		} else {
-			c.Set(ctx.Request.Header["Authorization"][0], "No user", cache.DefaultExpiration)
-			return "No user"
-		}
+	key := ctx.Request.Header["Authorization"][0]
+	if x := c.Get(key); x != nil {
+		return x.(string)
 	}
+	if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
+		c.Put(key, usuario.Sub, 60*time.Minute)
+		return usuario.Sub
+	}
+	c.Put(key, "No user", 60*time.Minute)
+	return "No user"
 }
 
 /*func ListenRequest(ctx *context.Context) {
@@ -182,6 +179,13 @@ func getUserAgent(ctx *context.Context) string {
 }
 
 func InitMiddleware() {
+	var err error
+	c, err = beegoCache.NewCache("memory", `{"interval":600}`)
+	if err != nil {
+		beego.Error("Error al inicializar el cache:", err)
+		return
+	}
+
 	customLogger := &customSQLLogger{}
 	orm.DebugLog = orm.NewLog(customLogger)
 

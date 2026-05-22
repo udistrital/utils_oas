@@ -6,6 +6,7 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/context"
+	"github.com/astaxie/beego/logs"
 )
 
 func GetJsonWithHeader(urlp string, target interface{}, ctx *context.Context) error {
@@ -21,6 +22,8 @@ func GetJsonWithHeader(urlp string, target interface{}, ctx *context.Context) er
 	if err != nil {
 		beego.Error("Error reading response. ", err)
 	}
+
+	logs.Info("Response status:", resp.Status)
 
 	defer resp.Body.Close()
 	return json.NewDecoder(resp.Body).Decode(target)

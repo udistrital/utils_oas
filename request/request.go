@@ -9,12 +9,17 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/astaxie/beego/logs"
 	"github.com/aws/aws-xray-sdk-go/v2/xray"
 )
 
 var ErrResponseDecode = errors.New("response body could not be decoded into target")
 
 var defaultClient = &http.Client{Timeout: 30 * time.Second}
+
+type contextKey string
+
+const AuthorizationKey contextKey = "Authorization"
 
 // doRequest executes req using the provided HTTP client, wrapping the call with
 // an X-Ray subsegment scoped to the request's context. The caller is
@@ -55,6 +60,7 @@ func doRequest(client *http.Client, req *http.Request) (*http.Response, error) {
 
 // GetWithContext makes a GET request to the given URL using the provided context.
 // Checks for non-2xx HTTP status codes, and decodes the response body into target.
+// If the context carries an Authorization value (via WithAuthorization), it is forwarded.
 func GetWithContext(ctx context.Context, urlp string, target any) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlp, nil)
 	if err != nil {
@@ -62,6 +68,11 @@ func GetWithContext(ctx context.Context, urlp string, target any) (int, error) {
 	}
 
 	req.Header.Set("Accept", "application/json")
+
+	logs.Info("auth key", ctx)
+	if token, ok := ctx.Value(AuthorizationKey).(string); ok && token != "" {
+		req.Header.Set("Authorization", token)
+	}
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
@@ -99,6 +110,9 @@ func PostWithContext(ctx context.Context, urlp string, body, target any) (int, e
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	if token, ok := ctx.Value(AuthorizationKey).(string); ok && token != "" {
+		req.Header.Set("Authorization", token)
+	}
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
@@ -136,6 +150,9 @@ func PutWithContext(ctx context.Context, urlp string, body, target any) (int, er
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	if token, ok := ctx.Value(AuthorizationKey).(string); ok && token != "" {
+		req.Header.Set("Authorization", token)
+	}
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
@@ -173,6 +190,9 @@ func PatchWithContext(ctx context.Context, urlp string, body, target any) (int, 
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	if token, ok := ctx.Value(AuthorizationKey).(string); ok && token != "" {
+		req.Header.Set("Authorization", token)
+	}
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
@@ -201,6 +221,9 @@ func DeleteWithContext(ctx context.Context, urlp string, target any) (int, error
 	}
 
 	req.Header.Set("Accept", "application/json")
+	if token, ok := ctx.Value(AuthorizationKey).(string); ok && token != "" {
+		req.Header.Set("Authorization", token)
+	}
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {

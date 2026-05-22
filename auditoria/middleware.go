@@ -1,68 +1,79 @@
 package auditoria
 
 import (
-	"fmt"
-	"time"
-
+	"context"
 	"encoding/json"
-
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/context"
-	"github.com/astaxie/beego/logs"
-	"github.com/astaxie/beego/orm"
-	"github.com/patrickmn/go-cache"
-
+	"fmt"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/cache"
+	beegoCtx "github.com/astaxie/beego/context"
+	"github.com/astaxie/beego/logs"
+	"github.com/astaxie/beego/orm"
+	"github.com/udistrital/utils_oas/request"
 )
 
-type Usuario struct {
-	Sub  string `json:"sub"`
-	Date time.Time
+var c cache.Cache
+
+type usuario struct {
+	Documento          string `json:"documento"`
+	DocumentoCompuesto string `json:"documento_compuesto"`
+	Email              string `json:"email"`
+	Role               string `json:"role"`
+	Sub                string `json:"sub"`
 }
 
-var userMap = make(map[string]string)
-var c = cache.New(60*time.Minute, 10*time.Minute)
-
-func getUserInfo2(ctx *context.Context) (u string) {
-	var usuario Usuario
-
-	if val, ok := userMap[ctx.Request.Header["Authorization"][0]]; ok {
-		return val
-	} else {
-		if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
-			userMap[ctx.Request.Header["Authorization"][0]] = usuario.Sub
-			return usuario.Sub
-		} else {
-			userMap[ctx.Request.Header["Authorization"][0]] = "No user"
-			return "No user"
-		}
+func InitMiddleware() {
+	var err error
+	c, err = cache.NewCache("memory", `{"interval":300}`)
+	if err != nil {
+		logs.Error("Error al inicializar el cache:", err)
+		return
 	}
+
+	customLogger := &customSQLLogger{}
+	orm.DebugLog = orm.NewLog(customLogger)
+
+	beego.InsertFilter("/*", beego.BeforeExec, func(ctx *beegoCtx.Context) {
+		if auth := ctx.Request.Header.Get("Authorization"); auth != "" {
+			ctx.Request = ctx.Request.WithContext(
+				context.WithValue(ctx.Request.Context(), request.AuthorizationKey, auth),
+			)
+		}
+	}, false)
+
+	logs.Info("middleware inicializado correctamente.")
+	beego.InsertFilter("/:version/*", beego.AfterExec, auditRequest(customLogger), false)
 }
 
-func getUserInfo(ctx *context.Context) (u string) {
-	var usuario Usuario
-	if x, found := c.Get(ctx.Request.Header["Authorization"][0]); found {
-		foo := x.(string)
-		return foo
-	} else {
-		if err := GetJsonWithHeader("https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &usuario, ctx); err == nil {
-			c.Set(ctx.Request.Header["Authorization"][0], usuario.Sub, cache.DefaultExpiration)
-			return usuario.Sub
-
-		} else {
-			c.Set(ctx.Request.Header["Authorization"][0], "No user", cache.DefaultExpiration)
-			return "No user"
-		}
+func getUserInfo(ctx *beegoCtx.Context) string {
+	authHeader := ctx.Request.Header.Get("Authorization")
+	if authHeader == "" {
+		return "No user"
 	}
+
+	if x := c.Get(authHeader); x != nil {
+		return x.(string)
+	}
+
+	var user usuario
+	if _, err := request.GetWithContext(ctx.Request.Context(), "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &user); err == nil {
+		c.Put(authHeader, user.Sub, 60*time.Minute)
+		logs.Info("Usuario obtenido y almacenado en cache:", user)
+		return user.Sub
+	} else {
+		logs.Error("Error al obtener información del usuario:", err)
+	}
+
+	c.Put(authHeader, "No user", 60*time.Minute)
+	return "No user"
 }
 
-func ListenRequest(logger *customSQLLogger) func(ctx *context.Context) {
-	return func(ctx *context.Context) {
-		if ctx.Request.URL.String() == "/" {
-			return
-		}
-
+func auditRequest(logger *customSQLLogger) func(ctx *beegoCtx.Context) {
+	return func(ctx *beegoCtx.Context) {
 		sqlQuery := logger.GetLastQuery()
 		if sqlQuery == "" {
 			sqlQuery = "No se registró sentencia SQL"
@@ -91,7 +102,7 @@ func ListenRequest(logger *customSQLLogger) func(ctx *context.Context) {
 		logData := map[string]interface{}{
 			"app_name":   beego.AppConfig.String("appname"),
 			"host":       ctx.Request.Host,
-			"end_point":  ctx.Request.URL.String(),
+			"end_point":  ctx.Request.URL.Path,
 			"method":     ctx.Request.Method,
 			"date":       time.Now().Format(time.RFC3339),
 			"sql_orm":    sqlQuery,
@@ -139,19 +150,12 @@ func sanitizeInputData(input interface{}) interface{} {
 	return input
 }
 
-func getUserAgent(ctx *context.Context) string {
-	if len(ctx.Request.Header["User-Agent"]) > 0 {
-		return ctx.Request.Header["User-Agent"][0]
+func getUserAgent(ctx *beegoCtx.Context) string {
+	if userAgent := ctx.Request.Header.Get("User-Agent"); userAgent != "" {
+		return userAgent
 	}
+
 	return "Desconocido"
-}
-
-func InitMiddleware() {
-	customLogger := &customSQLLogger{}
-	orm.DebugLog = orm.NewLog(customLogger)
-
-	logs.Info("middleware inicializado correctamente.")
-	beego.InsertFilter("*", beego.AfterExec, ListenRequest(customLogger), false)
 }
 
 type customSQLLogger struct {
