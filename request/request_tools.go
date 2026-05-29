@@ -273,8 +273,8 @@ func GetHeader() (h string) {
 // with an X-Ray subsegment via the local xray package.
 // The caller is responsible for closing resp.Body on success.
 func execRequest(client *http.Client, req *http.Request) (*http.Response, error) {
-	seg := xray.BeginSegmentSec(req)
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	ctx, subseg := xray.BeginSegmentSec(req)
+	resp, err := client.Do(req.WithContext(ctx))
+	xray.CloseSubsegment(subseg, resp, err)
 	return resp, err
 }
