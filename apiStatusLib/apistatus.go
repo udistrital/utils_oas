@@ -6,7 +6,7 @@ import (
 )
 
 func Init() {
-	beego.Any("/", func(ctx *context.Context) {
-		ctx.Output.JSON(map[string]interface{}{"status": "ok"}, true, true)
+	beego.Get("/", func(ctx *context.Context) {
+		_ = ctx.Output.JSON(map[string]any{"status": "ok"}, true, false)
 	})
 }

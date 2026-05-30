@@ -6,12 +6,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/globalsign/mgo"
-	"github.com/lib/pq"
-
-	"github.com/astaxie/beego/context"
-
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/context"
+	"github.com/astaxie/beego/logs"
+	"github.com/lib/pq"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // Response struct ... Response format JSON
@@ -58,7 +57,7 @@ func GlobalResponseHandler(ctx *context.Context) {
 	}()
 
 	if r := recover(); r != nil {
-		beego.Error(r)
+		logs.Error(r)
 		status = 500
 
 		out = formatResponseObject(fmt.Sprintf("%s", r), "", status)
@@ -71,17 +70,17 @@ func GlobalResponseHandler(ctx *context.Context) {
 			}
 		}
 		status = 200
-		switch Body.(type) {
-		case *json.UnmarshalTypeError, *json.UnmarshalFieldError, *pq.Error, *mgo.LastError:
+		switch b := Body.(type) {
+		case *json.UnmarshalTypeError, *pq.Error, mongo.CommandError, mongo.WriteException, mongo.BulkWriteException:
 			status = 500
 		case string:
-			Body, status = stringBeegoErrorCatch(Body.(string))
+			Body, status = stringBeegoErrorCatch(b)
 		}
 		out = formatResponseObject(Body, "", status)
 		return
 	}
 
-	beego.Error(Body)
+	logs.Error(Body)
 	status = 500
 	out = formatResponseObject(Body, "", status)
 }

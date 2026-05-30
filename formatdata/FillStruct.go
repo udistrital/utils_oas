@@ -25,11 +25,11 @@ import (
 //	  panic(err)
 //	}
 //	logs.Info("map --> struct OK", userStruct2)
-func FillStruct(in interface{}, out interface{}) (err error) {
-	var str []byte
-	if str, err = json.Marshal(in); err != nil {
-		return
+func FillStruct(in, out any) error {
+	b, err := json.Marshal(in)
+	if err != nil {
+		return err
 	}
-	err = json.Unmarshal(str, &out)
-	return
+
+	return json.Unmarshal(b, &out)
 }
