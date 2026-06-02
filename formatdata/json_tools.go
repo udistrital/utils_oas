@@ -2,35 +2,32 @@ package formatdata
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
-	"github.com/globalsign/mgo/bson"
+	"github.com/astaxie/beego/logs"
 	"github.com/go-playground/validator/v10"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-var validate *validator.Validate
+var validate = validator.New()
 
-func FillStructV(m interface{}, s interface{}) (err error) {
-	validate = validator.New()
-	err = FillStruct(m, &s)
-	valErr := validate.Struct(s)
-
-	if valErr != nil {
-		err = valErr
+func FillStructV(m, s any) error {
+	if err := FillStruct(m, &s); err != nil {
+		return err
 	}
-	return
+
+	return validate.Struct(s)
 }
 
-func FillStructP(m interface{}, s interface{}) {
+func FillStructP(m, s any) {
 	if err := FillStruct(m, &s); err != nil {
 		panic(err.Error())
 	}
 }
 
-func SetField(obj interface{}, name string, value interface{}) error {
+func SetField(obj any, name string, value any) error {
 
 	structValue := reflect.ValueOf(obj).Elem()
 	fieldVal := structValue.FieldByName(name)
@@ -47,7 +44,7 @@ func SetField(obj interface{}, name string, value interface{}) error {
 
 	if fieldVal.Type() != val.Type() {
 
-		if m, ok := value.(map[string]interface{}); ok {
+		if m, ok := value.(map[string]any); ok {
 
 			// if field value is struct
 			if fieldVal.Kind() == reflect.Struct {
@@ -73,52 +70,54 @@ func SetField(obj interface{}, name string, value interface{}) error {
 
 }
 
-func FillDataStruct(m map[string]interface{}, s interface{}) error {
+func FillDataStruct(m map[string]any, s any) error {
 	for k, v := range m {
-		err := SetField(s, k, v)
-		if err != nil {
+		if err := SetField(s, k, v); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
-func FillStructDeep(m map[string]interface{}, fields string, s interface{}) (err error) {
+
+func FillStructDeep(m map[string]any, fields string, s any) error {
 	f := strings.Split(fields, ".")
 	if len(f) == 0 {
-		err = errors.New("invalid fields.")
-		return
+		return fmt.Errorf("invalid fields.")
 	}
 
-	var aux map[string]interface{}
-	var load interface{}
+	var aux map[string]any
+	var load any
 	for i, value := range f {
-
 		if i == 0 {
-			//fmt.Println(m[value])
-			FillStruct(m[value], &load)
+			if err := FillStruct(m[value], &load); err != nil {
+				return err
+			}
 		} else {
-			FillStruct(load, &aux)
-			FillStruct(aux[value], &load)
-			//fmt.Println(aux[value])
+			if err := FillStruct(load, &aux); err != nil {
+				return err
+			}
+			if err := FillStruct(aux[value], &load); err != nil {
+				return err
+			}
 		}
 	}
-	err = FillStruct(load, &s)
-	return
+
+	return FillStruct(load, &s)
 }
 
-func JsonPrint(x interface{}) (err error) {
+func JsonPrint(x any) error {
 	b, err := json.MarshalIndent(x, "", "  ")
 	if err != nil {
-		fmt.Println("error:", err)
-		return
+		logs.Error("error:", err)
+		return err
 	}
-	fmt.Print(string(b))
-	return
+	logs.Info(string(b))
+	return nil
 }
 
 // StructValidation ... Validate struct by tags
-func StructValidation(data interface{}) (errMess []interface{}) {
-	validate = validator.New()
+func StructValidation(data any) (errMess []any) {
 	valErr := validate.Struct(data)
 	if valErr != nil {
 
@@ -132,16 +131,15 @@ func StructValidation(data interface{}) (errMess []interface{}) {
 
 // ToMap usa los tags en los campos del struct para decidir cuales campos se agregan
 // al map retornado.
-func ToMap(in interface{}, tag string) (map[string]interface{}, error) {
-	var (
-		err error
-	)
+func ToMap(in any, tag string) (map[string]any, error) {
+	var err error
+
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("%v", r)
 		}
 	}()
-	out := make(map[string]interface{})
+	out := make(map[string]any)
 
 	v := reflect.ValueOf(in)
 	if v.Kind() == reflect.Ptr {
@@ -170,11 +168,9 @@ func ToMap(in interface{}, tag string) (map[string]interface{}, error) {
 }
 
 // FillStructBson ... Unmarshal Bson types to struct
-func FillStructBson(in interface{}, out interface{}) {
+func FillStructBson(in, out any) {
 	j, _ := bson.Marshal(in)
-	err := bson.Unmarshal(j, out)
-	if err != nil {
+	if err := bson.Unmarshal(j, out); err != nil {
 		panic(err.Error())
 	}
-	return
 }
