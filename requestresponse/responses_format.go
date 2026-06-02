@@ -266,7 +266,9 @@ func ParseResponseFormato1(resp interface{}) (interface{}, error) {
 	if err != nil {
 		return expRespV1, err
 	}
-	json.Unmarshal(jsonString, &expRespV1)
+	if err := json.Unmarshal(jsonString, &expRespV1); err != nil {
+		return expRespV1, err
+	}
 	// ? se corrobora nuevamente el estatus de la respuesta, por si las dudas (ha pasado que la petición retorna ok con Success false)
 	_status, _ := strconv.Atoi(expRespV1.Status)
 	if _status < 200 || _status > 299 || !expRespV1.Success {
@@ -301,7 +303,9 @@ func ParseResponseFormato2(resp interface{}) (interface{}, error) {
 	if err != nil {
 		return expRespV1, err
 	}
-	json.Unmarshal(jsonString, &expRespV1)
+	if err := json.Unmarshal(jsonString, &expRespV1); err != nil {
+		return expRespV1, err
+	}
 	// ? se corrobora nuevamente el estatus de la respuesta, por si las dudas (ha pasado que la petición retorna ok con Success false)
 	if expRespV1.Status < 200 || expRespV1.Status > 299 || !expRespV1.Success {
 		return expRespV1, fmt.Errorf("not successful response")
