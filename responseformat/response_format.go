@@ -87,10 +87,7 @@ func GlobalResponseHandler(ctx *context.Context) {
 
 // CheckResponseError ... return true if response format type is an error.
 func CheckResponseError(response Response) bool {
-	if response.Type == "error" {
-		return true
-	}
-	return false
+	return response.Type == "error"
 }
 
 func stringBeegoErrorCatch(err string) (body interface{}, status int) {

@@ -33,7 +33,10 @@ func Post(url string, body interface{}, parser func(interface{}) (interface{}, e
 	if body == nil {
 		return nil, fmt.Errorf("body is empty")
 	}
-	json.NewEncoder(bodyBytes).Encode(body)
+
+	if err := json.NewEncoder(bodyBytes).Encode(body); err != nil {
+		return nil, fmt.Errorf("could not encode request body: %w", err)
+	}
 
 	jsonResponse, err := _doReq("POST", url, bodyBytes)
 	if err != nil {
@@ -81,7 +84,10 @@ func Put(url string, body interface{}, parser func(interface{}) (interface{}, er
 	if body == nil {
 		return nil, fmt.Errorf("body is empty")
 	}
-	json.NewEncoder(bodyBytes).Encode(body)
+
+	if err := json.NewEncoder(bodyBytes).Encode(body); err != nil {
+		return nil, fmt.Errorf("could not encode request body: %w", err)
+	}
 
 	jsonResponse, err := _doReq("PUT", url, bodyBytes)
 	if err != nil {
@@ -132,9 +138,9 @@ func _doReq(method string, url string, body io.Reader) (interface{}, error) {
 	}
 	// ? Realizar la petición
 	client := &http.Client{}
-	seg := xray.BeginSegmentSec(req)
-	resp, err := client.Do(req)
-	xray.UpdateSegment(resp, err, seg)
+	ctx, seg := xray.BeginSegmentSec(req)
+	resp, err := client.Do(req.WithContext(ctx))
+	xray.CloseSubsegment(seg, resp, err)
 	if err != nil {
 		return nil, err
 	}
