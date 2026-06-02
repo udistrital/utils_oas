@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"github.com/astaxie/beego"
-	. "github.com/mndrix/golog"
+	"github.com/astaxie/beego/logs"
+	"github.com/mndrix/golog"
 	"github.com/udistrital/utils_oas/formatdata"
 	"github.com/udistrital/utils_oas/request"
 )
@@ -24,12 +25,13 @@ type EntornoReglas struct {
 
 func (e *EntornoReglas) Agregar_dominio(dominio string) {
 	var v []Predicado
-	if err := request.GetJson(beego.AppConfig.String("rulerService")+"predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err == nil {
-		for i := 0; i < len(v); i++ {
-			e.base = e.base + v[i].Nombre + "\n"
-		}
-	} else {
-		beego.Error(err.Error())
+	if err := request.GetJson(beego.AppConfig.String("rulerService")+"predicado?limit=0&query=Dominio.Nombre:"+dominio, &v); err != nil {
+		logs.Error(err.Error())
+		return
+	}
+
+	for i := 0; i < len(v); i++ {
+		e.base = e.base + v[i].Nombre + "\n"
 	}
 }
 
@@ -136,7 +138,7 @@ func (e *EntornoReglas) Quitar_predicados() {
 }
 
 func (e *EntornoReglas) Ejecutar_result(regla string, variable string) (res interface{}) {
-	f := NewMachine().Consult(e.predicados + e.base)
+	f := golog.NewMachine().Consult(e.predicados + e.base)
 	solutions := f.ProveAll(regla)
 	//fmt.Println(solutions)
 	for _, solution := range solutions {
@@ -147,7 +149,7 @@ func (e *EntornoReglas) Ejecutar_result(regla string, variable string) (res inte
 }
 
 func (e *EntornoReglas) Ejecutar_all_result(regla string, variable string) (res []interface{}) {
-	f := NewMachine().Consult(e.predicados + e.base)
+	f := golog.NewMachine().Consult(e.predicados + e.base)
 	solutions := f.ProveAll(regla)
 	//fmt.Println(solutions)
 	for _, solution := range solutions {
