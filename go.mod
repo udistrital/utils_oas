@@ -11,7 +11,6 @@ require (
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/lib/pq v1.10.9
 	github.com/mndrix/golog v0.0.0-20170330170653-a28e2a269775
-	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/phpdave11/gofpdf v1.4.3
 	github.com/xuri/excelize/v2 v2.10.1
 	go.mongodb.org/mongo-driver/v2 v2.6.0
