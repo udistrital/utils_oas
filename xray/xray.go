@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -18,13 +19,13 @@ import (
 	"github.com/udistrital/utils_oas/ssm"
 )
 
-var appName = beego.AppConfig.String("appname")
+const (
+	segmentKey string = "xray_seg"
+	traceIDKey string = "X-Amzn-Trace-Id"
+)
 
+var appName = beego.AppConfig.String("appname")
 var globalCtx context.Context
-var globalSeg *xray.Segment
-var statusCode int
-var url string
-var method string
 
 func Init() {
 	if err := InitXRay(); err != nil {
@@ -39,7 +40,7 @@ func InitXRay() error {
 	}
 
 	beego.InsertFilter("/:version/*", beego.BeforeExec, beginSegment)
-	beego.InsertFilter("/:version/*", beego.AfterExec, endSegment, false)
+	beego.InsertFilter("/:version/*", beego.AfterExec, EndSegment, false)
 	return nil
 }
 
@@ -67,69 +68,49 @@ func configureXRay() error {
 	return nil
 }
 
-// Función que Crea el segmento principal asociado a la API, tomando en cuenta si
-// es la API principal (a la cual se realizó la petición inicial) o una secundaria.
-//
-// Parámetros:
-// - ctx: objeto context de Beego
-//
-// Variables:
-// - URL: URL de la petición.
-// - method: Método de la petición.
-// - globalCtx: Inicialización de un contexto vacío para almacenar los segmentos que se generen.
-// - globalSeg: Segmento principal de la Traza.
+// Función que crea el segmento principal asociado a la petición entrante
+// y lo almacena en el contexto de la petición para su posterior uso en subsegmentos
+
 func beginSegment(ctx *beegoCtx.Context) {
 	host := ctx.Input.Context.Request.Host
 	if strings.HasPrefix(host, "localhost") {
-		globalSeg = nil
 		return
 	}
 
-	url = "http://" + host + ctx.Input.Context.Request.URL.String()
-	method = ctx.Request.Method
 	env := ""
 	if strings.HasPrefix(host, "pruebas") {
 		env = "_test"
 	}
 
-	reqCtx, reqSeg := xray.BeginSegment(ctx.Request.Context(), appName+env)
-	reqSeg.HTTP = &xray.HTTPData{
-		Request:  &xray.RequestData{Method: method, URL: url},
-		Response: &xray.ResponseData{Status: 0},
+	url := ctx.Input.Scheme() + "://" + host + ctx.Input.Context.Request.URL.String()
+	method := ctx.Request.Method
+	reqCtx, seg := xray.BeginSegment(ctx.Request.Context(), appName+env)
+	seg.HTTP = &xray.HTTPData{
+		Request: &xray.RequestData{Method: method, URL: url},
 	}
 
-	traceID := ctx.Request.Header.Values("X-Amzn-Trace-Id")
+	traceID := ctx.Request.Header.Values(traceIDKey)
 	if traceID != nil {
 		h := header.FromString(strings.Trim(traceID[0], "[]"))
-		reqSeg.TraceID = h.TraceID
-		reqSeg.ParentID = h.ParentID
-		ctx.ResponseWriter.Header().Set("Resp-X-Amzn-Trace-Id", "true")
+		seg.TraceID = h.TraceID
+		seg.ParentID = h.ParentID
 	}
 
+	reqCtx = context.WithValue(reqCtx, segmentKey, seg)
 	ctx.Request = ctx.Request.WithContext(reqCtx)
-	ctx.Input.SetData("xray_seg", reqSeg)
-	ctx.Input.SetData("xray_url", url)
-	ctx.Input.SetData("xray_method", method)
 
 	globalCtx = reqCtx
-	globalSeg = reqSeg
 }
 
-// Actualiza y cierra el segmento principal y envía los datos del segmento y la traza a AWS X-Ray.
-//
-// Parámetros:
-// - ctx: puntero a objeto context de Beego
-func endSegment(ctx *beegoCtx.Context) {
-	seg, ok := ctx.Input.GetData("xray_seg").(*xray.Segment)
+// Actualiza y cierra el segmento asociado a la petición entrante
+func EndSegment(ctx *beegoCtx.Context) {
+	seg, ok := ctx.Request.Context().Value(segmentKey).(*xray.Segment)
 	if !ok || seg == nil {
 		return
 	}
 
-	url, _ := ctx.Input.GetData("xray_url").(string)
-	method, _ := ctx.Input.GetData("xray_method").(string)
-
 	status := ctx.ResponseWriter.Status
-	if jsonMap, ok := ctx.Input.GetData("json").(map[string]interface{}); ok {
+	if jsonMap, ok := ctx.Input.GetData("json").(map[string]any); ok {
 		if s, ok := jsonMap["Status"].(string); ok {
 			if num, err := strconv.Atoi(s); err == nil {
 				status = num
@@ -141,162 +122,50 @@ func endSegment(ctx *beegoCtx.Context) {
 		status = http.StatusOK
 	}
 
-	seg.HTTP = &xray.HTTPData{
-		Request:  &xray.RequestData{Method: method, URL: url},
-		Response: &xray.ResponseData{Status: status},
-	}
-	if status >= http.StatusInternalServerError {
-		_ = seg.AddError(fmt.Errorf("response status %d", status))
-	}
+	xray.HttpCaptureResponse(seg, status)
 	seg.Close(nil)
 }
 
-// Actualiza el estado del segmento principal con la respuesta de la petición.
-// En caso de ser un estado 5XX, adjunta el error de la petición al segmento y lo cierra.
-//
-// Parámetros:
-// - status: el código de estado HTTP de la respuesta.
-// - err: el error generado en la petición.
-func UpdateState(status int, err error) {
-	if globalSeg == nil {
-		return
+// BeginSubsegment starts an X-Ray subsegment for an outgoing HTTP request.
+// It sets the trace propagation header on req and returns the updated context and subsegment
+func BeginSubsegment(ctx context.Context, req *http.Request) (context.Context, *xray.Segment) {
+	if xray.GetSegment(ctx) == nil || req == nil {
+		return ctx, nil
 	}
-	statusCode = status
-	globalSeg.HTTP = &xray.HTTPData{
-		Request:  &xray.RequestData{Method: method, URL: url},
-		Response: &xray.ResponseData{Status: statusCode},
+
+	ctx, subseg := xray.BeginSubsegment(ctx, req.Host)
+	subseg.Namespace = "remote"
+	subseg.HTTP = &xray.HTTPData{
+		Request: &xray.RequestData{Method: req.Method, URL: req.URL.String()},
 	}
-	if status == http.StatusInternalServerError || status == http.StatusNotImplemented || status == http.StatusBadGateway || status == http.StatusServiceUnavailable {
-		_ = globalSeg.AddError(fmt.Errorf("%v", err))
-		globalSeg.Close(nil)
-	}
+	req.Header.Set(traceIDKey, subseg.DownstreamHeader().String())
+
+	return ctx, subseg
 }
 
-// Función que maneja errores 5xx.
-//
-// Toma un error como parámetro y hace lo siguiente:
-// - Establece el código de estado del segmento en 500.
-// - Agrega metadatos al segmento para especificar el error.
-// - Agrega un error al segmento.
-// - Cierra el segmento.
-func ErrorController5xx(err error) {
-	if globalSeg == nil {
+// CloseSubsegment records the HTTP response status on subseg and closes it.
+func CloseSubsegment(subseg *xray.Segment, resp *http.Response, err error) {
+	if subseg == nil {
 		return
 	}
 
-	statusCode = 500
-	globalSeg.HTTP = &xray.HTTPData{
-		Request:  &xray.RequestData{Method: method, URL: url},
-		Response: &xray.ResponseData{Status: statusCode},
-	}
-	_ = globalSeg.AddMetadata("Error", err)
-	_ = globalSeg.AddError(fmt.Errorf("%v", err))
-	globalSeg.Close(nil)
-}
-
-// Instrumenta la actualización del estado del segmento principal, cuando se obtiene una respuesta
-// con un error.
-// Establece los datos HTTP para el segmento con el método de la solicitud, la URL y el código de
-// estado de respuesta. Agrega metadatos con la información del error y, finalmente, cierra el segmento.
-//
-// Parámetros:
-// - status: el código de estado a actualizar.
-// - err: la información del error para agregar como metadatos.
-func EndSegmentErr(status int, err interface{}) {
-	if globalSeg == nil {
-		return
-	}
-
-	if statusCode != 500 && statusCode != 501 && statusCode != 502 && statusCode != 503 {
-		statusCode = status
-	}
-
-	globalSeg.HTTP = &xray.HTTPData{
-		Request:  &xray.RequestData{Method: method, URL: url},
-		Response: &xray.ResponseData{Status: statusCode},
-	}
-	_ = globalSeg.AddMetadata("Error", err)
-	globalSeg.Close(nil)
-}
-
-// Función creada para la creación de segmentos secundarios desde el API principal, que realizan
-// seguimiento a las peticiones realizadas a otras APIs.
-// Transmite, a través del Header de la petición, el ID de Traza y del segmento principal.
-// Inicializa el segmento secundario y lo asigna como hijo del segmento principal.
-//
-// Parámetros:
-// - req: puntero a Request de la petición saliente.
-//
-// Devoluciones:
-// - seg: puntero al segmento secundario recién creado.
-func BeginSegmentSec(req *http.Request) *xray.Segment {
-	if globalSeg == nil {
-		return nil
-	}
-
-	req.Header.Set("X-Amzn-Trace-Id", globalSeg.DownstreamHeader().String())
-	_, seg := xray.BeginSegment(globalCtx, req.Host)
-	seg.Lock()
-	seg.Origin = url
-	seg.HTTP = &xray.HTTPData{
-		Request:  &xray.RequestData{Method: req.Method, URL: req.URL.String()},
-		Response: &xray.ResponseData{Status: 0},
-	}
-
-	seg.TraceID = globalSeg.TraceID
-	seg.ParentID = globalSeg.ID
-	seg.Unlock()
-	return seg
-}
-
-// Actualiza y cierra el segmento secundario con la respuesta obtenida de la solicitud.
-// Tambien detecta si la API a la que realizó la solicitud se encuentra tambien instrumentada con
-// X-Ray. En caso de cumplir esta condición, elimina el segmento actual para evitar un duplicado.
-//
-// Esta función toma tres parámetros: resp, err y seg. El parámetro resp es de tipo *http.Response y representa
-// la respuesta HTTP. El parámetro err es de tipo error y representa cualquier error que ocurrió durante la solicitud.
-// El parámetro seg es de tipo *xray.Segment y representa el segmento de rayos X.
-//
-// No hay ningún valor de retorno para esta función.
-func UpdateSegmentSec(resp *http.Response, err error, seg *xray.Segment) {
-	if seg == nil {
-		return
-	}
-	var status int
-	if err != nil {
-		status = 500
-		_ = seg.AddError(err)
-	} else {
-		status = resp.StatusCode
-		if resp.Header.Values("Resp-X-Amzn-Trace-Id") != nil {
-			seg.Sampled = false
+	statusCode := 0
+	if resp != nil {
+		statusCode = resp.StatusCode
+	} else if err != nil {
+		// added to show non instrumented services in xray
+		var netErr net.Error
+		if (errors.As(err, &netErr) && netErr.Timeout()) || errors.Is(err, context.DeadlineExceeded) {
+			statusCode = http.StatusGatewayTimeout
+		} else {
+			statusCode = http.StatusBadGateway
 		}
 	}
-	seg.HTTP = &xray.HTTPData{
-		Request: &xray.RequestData{
-			Method: seg.HTTP.Request.Method,
-			URL:    seg.HTTP.Request.URL,
-		},
-		Response: &xray.ResponseData{
-			Status: status,
-		},
-	}
-	seg.Close(nil)
+
+	xray.HttpCaptureResponse(subseg, statusCode)
+	subseg.Close(err)
 }
 
-// Realiza la actualización y cierre del segmento secundario y, actualiza en cascada el estado del
-// segmento principal. En caso de haber algun error en la respuesta, este se propaga al segmento principal
-// y se cierra.
-//
-// Parámetros:
-// - resp: la respuesta HTTP de la petición.
-// - err: error de la petición.
-// - seg: puntero al segmento secundario.
-func UpdateSegment(resp *http.Response, err error, seg *xray.Segment) {
-	UpdateSegmentSec(resp, err, seg)
-	if err != nil {
-		ErrorController5xx(err)
-	} else {
-		UpdateState(resp.StatusCode, err)
-	}
+func BeginSegmentSec(req *http.Request) (context.Context, *xray.Segment) {
+	return BeginSubsegment(globalCtx, req)
 }

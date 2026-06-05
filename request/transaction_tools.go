@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/http"
 	"reflect"
 	"sort"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/logs"
 	"github.com/udistrital/utils_oas/formatdata"
-	"github.com/udistrital/utils_oas/xray"
 )
 
 const (
@@ -24,7 +22,6 @@ const (
 	JSON_error      string = "Error en el archivo JSON"
 	ErrorParametros string = "Error en los parametros de ingreso"
 	ErrorBody       string = "Cuerpo de la peticion invalido"
-	AppJson         string = "application/json"
 )
 
 type Excep struct {
@@ -86,7 +83,6 @@ func ExtractData(respuesta map[string]interface{}, v interface{}, err2 error) er
 		break
 	default:
 		err = formatdata.FillStruct(respuesta["Data"], &v)
-		respuesta = nil
 	}
 	return err
 }
@@ -111,69 +107,6 @@ func (err Excep) Rollback(f func(response interface{}, excep interface{}), param
 		}()
 		f(params, err.error)
 	}
-}
-
-func diff(a, b time.Time) (year, month, day int) {
-	if a.Location() != b.Location() {
-		b = b.In(a.Location())
-	}
-	if a.After(b) {
-		a, b = b, a
-	}
-	y1, M1, d1 := a.Date()
-	y2, M2, d2 := b.Date()
-
-	year = int(y2 - y1)
-	month = int(M2 - M1)
-	day = int(d2 - d1)
-
-	// Normalize negative values
-
-	if day < 0 {
-		// days in month:
-		t := time.Date(y1, M1, 32, 0, 0, 0, 0, time.UTC)
-		day += 32 - t.Day()
-		month--
-	}
-	if month < 0 {
-		month += 12
-		year--
-	}
-
-	return
-}
-
-func diff2(a, b time.Time) (year, month, day int) {
-	if a.Location() != b.Location() {
-		b = b.In(a.Location())
-	}
-	if a.After(b) {
-		a, b = b, a
-	}
-	oneDay := time.Hour * 5
-	a = a.Add(oneDay)
-	b = b.Add(oneDay)
-	y1, M1, d1 := a.Date()
-	y2, M2, d2 := b.Date()
-
-	year = int(y2 - y1)
-	month = int(M2 - M1)
-	day = int(d2 - d1)
-
-	// Normalize negative values
-
-	if day < 0 {
-		// days in month: p
-		t := time.Date(y1, M1, 32, 0, 0, 0, 0, time.UTC)
-		day += 32 - t.Day()
-		month--
-	}
-	if month < 0 {
-		month += 12
-		year--
-	}
-
-	return
 }
 
 func Diff3(a, b time.Time) (year, month, day int) {
@@ -250,12 +183,18 @@ func GetUsuario(usuario string) (nombreUsuario map[string]interface{}, err error
 func ErrorController(c beego.Controller, controller string) {
 	if err := recover(); err != nil {
 		logs.Error(err)
-		localError := err.(map[string]interface{})
-		c.Data["mesaage"] = (beego.AppConfig.String("appname") + "/" + controller + "/" + (localError["funcion"]).(string))
-		c.Data["data"] = (localError["err"])
-		xray.EndSegmentErr(http.StatusBadRequest, localError["err"])
-		if status, ok := localError["status"]; ok {
-			c.Abort(status.(string))
+		localError, ok := err.(map[string]interface{})
+		if !ok {
+			c.Data["mesaage"] = beego.AppConfig.String("appname") + "/" + controller
+			c.Data["data"] = fmt.Sprintf("%v", err)
+			c.Abort("500")
+			return
+		}
+		funcion, _ := localError["funcion"].(string)
+		c.Data["mesaage"] = beego.AppConfig.String("appname") + "/" + controller + "/" + funcion
+		c.Data["data"] = localError["err"]
+		if status, ok := localError["status"].(string); ok && status != "" {
+			c.Abort(status)
 		} else {
 			c.Abort("500")
 		}
@@ -276,7 +215,9 @@ func LimpiezaRespuestaRefactor(respuesta map[string]interface{}, v interface{}) 
 	if err != nil {
 		panic(err)
 	}
-	json.Unmarshal(b, &v)
+	if err := json.Unmarshal(b, &v); err != nil {
+		panic(err)
+	}
 }
 
 func CalcularDias(FechaInicio time.Time, FechaFin time.Time) (diasLaborados float64, meses float64) {

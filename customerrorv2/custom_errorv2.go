@@ -2,9 +2,10 @@ package customerrorv2
 
 import (
 	"github.com/astaxie/beego"
+	"github.com/udistrital/utils_oas/auditoria"
+	"github.com/udistrital/utils_oas/xray"
 )
 
-// UsuarioController operations for Usuario
 type CustomErrorController struct {
 	beego.Controller
 }
@@ -12,6 +13,8 @@ type CustomErrorController struct {
 func genericError(c *CustomErrorController, status string) {
 	outputError := map[string]interface{}{"Success": false, "Status": status, "Message": c.Data["mesaage"], "Data": c.Data["data"]}
 	c.Data["json"] = outputError
+	xray.EndSegment(c.Ctx)
+	auditoria.LogRequest(c.Ctx)
 	c.ServeJSON()
 }
 
