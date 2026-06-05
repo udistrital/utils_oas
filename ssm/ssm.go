@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
-func GetParameterFromParameterStore(ctx context.Context, name string) (string, error) {
+func GetValueFromParameterStore(ctx context.Context, name string) (string, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return "", fmt.Errorf("unable to load SDK config: %w", err)

@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 
 	"github.com/astaxie/beego"
@@ -18,17 +19,17 @@ func BuildPostgresConnectionString() (string, error) {
 		return conn, nil
 	}
 
-	parameterBasePath := "/" + baseParameterStore + "/" + beego.AppConfig.String("appname") + "/db/"
+	parameterBasePath := fmt.Sprintf("/%s/%s/db/", baseParameterStore, beego.AppConfig.String("appname"))
 
 	ctx := context.Background()
 
-	username, err := ssm.GetParameterFromParameterStore(ctx, parameterBasePath+"username")
+	username, err := ssm.GetValueFromParameterStore(ctx, parameterBasePath+"username")
 	if err != nil {
 		logs.Critical("error consultando username: %v", err)
 		return "", errors.New("error consultando credenciales: " + err.Error())
 	}
 
-	password, err := ssm.GetParameterFromParameterStore(ctx, parameterBasePath+"password")
+	password, err := ssm.GetValueFromParameterStore(ctx, parameterBasePath+"password")
 	if err != nil {
 		logs.Critical("error consultando credenciales: %v", err)
 		return "", errors.New("error consultando credenciales: " + err.Error())
@@ -40,5 +41,11 @@ func BuildPostgresConnectionString() (string, error) {
 }
 
 func formatPostgresConnectionString(username, password string) string {
-	return "postgres://" + username + ":" + url.QueryEscape(password) + "@" + beego.AppConfig.String("PGhost") + ":" + beego.AppConfig.String("PGport") + "/" + beego.AppConfig.String("PGdb") + "?sslmode=disable&search_path=" + beego.AppConfig.String("PGschema")
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?search_path=%s&sslmode=disable",
+		username,
+		url.QueryEscape(password),
+		beego.AppConfig.String("PGhost"),
+		beego.AppConfig.String("PGport"),
+		beego.AppConfig.String("PGdb"),
+		beego.AppConfig.String("PGschema"))
 }

@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 
 	"github.com/astaxie/beego"
@@ -18,17 +19,17 @@ func BuildOracleConnectionString() (string, error) {
 		return conn, nil
 	}
 
-	parameterBasePath := "/" + baseParameterStore + "/" + beego.AppConfig.String("appname") + "/db/"
+	parameterBasePath := fmt.Sprintf("/%s/%s/db/", baseParameterStore, beego.AppConfig.String("appname"))
 
 	ctx := context.Background()
 
-	username, err := ssm.GetParameterFromParameterStore(ctx, parameterBasePath+"username")
+	username, err := ssm.GetValueFromParameterStore(ctx, parameterBasePath+"username")
 	if err != nil {
 		logs.Critical("error consultando username: %v", err)
 		return "", errors.New("error consultando credenciales: " + err.Error())
 	}
 
-	password, err := ssm.GetParameterFromParameterStore(ctx, parameterBasePath+"password")
+	password, err := ssm.GetValueFromParameterStore(ctx, parameterBasePath+"password")
 	if err != nil {
 		logs.Critical("error consultando credenciales: %v", err)
 		return "", errors.New("error consultando credenciales: " + err.Error())
@@ -40,5 +41,10 @@ func BuildOracleConnectionString() (string, error) {
 }
 
 func formatOracleConnectionString(username, password string) string {
-	return "oracle://" + username + ":" + url.QueryEscape(password) + "@" + beego.AppConfig.String("ORhost") + ":" + beego.AppConfig.String("ORport") + "/" + beego.AppConfig.String("ORservice")
+	return fmt.Sprintf("oracle://%s:%s@%s:%s/%s",
+		username,
+		url.QueryEscape(password),
+		beego.AppConfig.String("ORhost"),
+		beego.AppConfig.String("ORport"),
+		beego.AppConfig.String("ORservice"))
 }

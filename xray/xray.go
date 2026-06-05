@@ -51,7 +51,7 @@ func configureXRay() error {
 		return fmt.Errorf("no se puede consultar daemon address: %v", errors.New("parameterStore no configurado"))
 	}
 
-	daemonAddr, err := ssm.GetParameterFromParameterStore(context.Background(), "/"+parameterStore+"/utils/xray/DaemonAddr")
+	daemonAddr, err := ssm.GetValueFromParameterStore(context.Background(), fmt.Sprintf("/%s/utils/xray/DaemonAddr", parameterStore))
 	if err != nil {
 		return fmt.Errorf("error consultando daemon address: %v", err)
 	}
