@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.8
 	github.com/aws/aws-xray-sdk-go/v2 v2.0.1
 	github.com/go-playground/validator/v10 v10.30.1
-	github.com/lib/pq v1.10.9
+	github.com/lib/pq v1.12.3
 	github.com/mndrix/golog v0.0.0-20170330170653-a28e2a269775
 	github.com/phpdave11/gofpdf v1.4.3
 	github.com/xuri/excelize/v2 v2.10.1
