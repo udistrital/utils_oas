@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"sync"
@@ -47,6 +48,7 @@ type requestLog struct {
 	Query        string         `json:"query,omitempty"`
 	Schema       string         `json:"schema,omitempty"`
 	SQLStatement string         `json:"sql_statement,omitempty"`
+	Status       int            `json:"status"`
 	TraceID      string         `json:"trace_id,omitempty"`
 	User         string         `json:"user"`
 }
@@ -125,6 +127,11 @@ func LogRequest(ctx *beegoCtx.Context) {
 func logRequestWithLogger(ctx *beegoCtx.Context, logger *customSQLLogger) {
 	user, _ := ctx.Request.Context().Value(userKey).(string)
 
+	status := ctx.ResponseWriter.Status
+	if status == 0 {
+		status = http.StatusOK
+	}
+
 	entry := requestLog{
 		AppName:      appName,
 		Agent:        ctx.Input.UserAgent(),
@@ -137,6 +144,7 @@ func logRequestWithLogger(ctx *beegoCtx.Context, logger *customSQLLogger) {
 		Query:        ctx.Request.URL.RawQuery,
 		Schema:       ctx.Input.Scheme(),
 		SQLStatement: logger.GetLastQuery(),
+		Status:       status,
 		TraceID:      xray.TraceID(ctx.Request.Context()),
 		User:         user,
 	}
