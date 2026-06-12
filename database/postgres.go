@@ -15,11 +15,14 @@ func BuildPostgresConnectionString() (string, error) {
 	baseParameterStore := beego.AppConfig.String("parameterStore")
 	if baseParameterStore == "" {
 		logs.Info("usando credenciales locales para la conexión a la base de datos")
-		conn := formatPostgresConnectionString(beego.AppConfig.String("PGuser"), beego.AppConfig.String("PGpass"))
+		user := beego.AppConfig.String("PGuser")
+		pass := beego.AppConfig.String("PGpass")
+		conn := formatPostgresConnectionString(user, pass)
 		return conn, nil
 	}
 
-	parameterBasePath := fmt.Sprintf("/%s/%s/db/", baseParameterStore, beego.AppConfig.String("appname"))
+	appname := beego.AppConfig.String("appname")
+	parameterBasePath := fmt.Sprintf("/%s/%s/db/", baseParameterStore, appname)
 
 	ctx := context.Background()
 
@@ -41,11 +44,15 @@ func BuildPostgresConnectionString() (string, error) {
 }
 
 func formatPostgresConnectionString(username, password string) string {
+	host := beego.AppConfig.String("PGhost")
+	port := beego.AppConfig.String("PGport")
+	db := beego.AppConfig.String("PGdb")
+	schema := beego.AppConfig.String("PGschema")
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?search_path=%s&sslmode=disable",
 		username,
 		url.QueryEscape(password),
-		beego.AppConfig.String("PGhost"),
-		beego.AppConfig.String("PGport"),
-		beego.AppConfig.String("PGdb"),
-		beego.AppConfig.String("PGschema"))
+		host,
+		port,
+		db,
+		schema)
 }

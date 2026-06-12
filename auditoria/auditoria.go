@@ -87,6 +87,11 @@ func InitMiddleware() {
 }
 
 func validateAndSetAuth(ctx *beegoCtx.Context) {
+	// skip token validation in local environment
+	if strings.HasPrefix(ctx.Input.Context.Request.Host, "localhost") {
+		return
+	}
+
 	token := ctx.Request.Header.Get(authorizationKey)
 	if token == "" {
 		// debería retornar 401
@@ -95,19 +100,15 @@ func validateAndSetAuth(ctx *beegoCtx.Context) {
 	}
 
 	reqCtx := context.WithValue(ctx.Request.Context(), authorizationKey, token)
-	if sub, ok := c.Get(token).(string); ok && sub != "" {
-		ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, sub))
-		return
-	}
-
-	// skip token validation in local environment
-	if strings.HasPrefix(ctx.Input.Context.Request.Host, "localhost") {
+	cachedUser := c.Get(token)
+	if user, ok := cachedUser.(string); ok && user != "" {
+		ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, user))
 		return
 	}
 
 	var user usuario
-	if _, err := request.GetWithContext(reqCtx, "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &user); err != nil {
-		logs.Error("error al validar el token:", err)
+	if status, err := request.GetWithContext(reqCtx, "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &user); err != nil {
+		logs.Error("error al validar el token: %v, status %d", err, status)
 		// debería retornar 401
 		// ctx.Abort(401, "unauthorized")
 		return

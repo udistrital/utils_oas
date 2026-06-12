@@ -17,16 +17,6 @@ import (
 var global string
 var defClient = &http.Client{}
 
-// execRequest executes req using the provided HTTP client, wrapping the call
-// with an X-Ray subsegment via the local xray package.
-// The caller is responsible for closing resp.Body on success.
-func execRequest(client *http.Client, req *http.Request) (*http.Response, error) {
-	ctx, subseg := xray.BeginSegmentSec(req)
-	resp, err := client.Do(req.WithContext(ctx))
-	xray.CloseSubsegment(subseg, resp, err)
-	return resp, err
-}
-
 func SendJson(url string, method string, target, body any) error {
 	b := new(bytes.Buffer)
 	if body != nil {
@@ -240,4 +230,14 @@ func SetHeader(h string) {
 
 func GetHeader() (h string) {
 	return global
+}
+
+// execRequest executes req using the provided HTTP client, wrapping the call
+// with an X-Ray subsegment via the local xray package.
+// The caller is responsible for closing resp.Body on success.
+func execRequest(client *http.Client, req *http.Request) (*http.Response, error) {
+	ctx, subseg := xray.BeginSegmentSec(req)
+	resp, err := client.Do(req.WithContext(ctx))
+	xray.CloseSubsegment(subseg, resp, err)
+	return resp, err
 }

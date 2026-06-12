@@ -28,9 +28,13 @@ type Excep struct {
 	error interface{}
 }
 
+var appname = beego.AppConfig.String("appname")
+var protocol = beego.AppConfig.String("ProtocolAdmin")
+
 // Envia una petición con datos al endpoint indicado y extrae la respuesta del campo Data para retornarla
 func SendRequestNew(endpoint string, route string, trequest string, target interface{}, datajson interface{}) error {
-	url := beego.AppConfig.String("ProtocolAdmin") + beego.AppConfig.String(endpoint) + route
+	endpointURL := beego.AppConfig.String(endpoint)
+	url := protocol + endpointURL + route
 	var response map[string]interface{}
 	var err error
 	err = SendJson(url, trequest, &response, &datajson)
@@ -40,7 +44,8 @@ func SendRequestNew(endpoint string, route string, trequest string, target inter
 
 // Envia una petición con datos a endpoints que responden con el body sin encapsular
 func SendRequestLegacy(endpoint string, route string, trequest string, target interface{}, datajson interface{}) error {
-	url := beego.AppConfig.String("ProtocolAdmin") + beego.AppConfig.String(endpoint) + route
+	endpointURL := beego.AppConfig.String(endpoint)
+	url := protocol + endpointURL + route
 	if err := SendJson(url, trequest, &target, &datajson); err != nil {
 		return err
 	}
@@ -49,7 +54,8 @@ func SendRequestLegacy(endpoint string, route string, trequest string, target in
 
 // Envia una petición al endpoint indicado y extrae la respuesta del campo Data para retornarla
 func GetRequestNew(endpoint string, route string, target interface{}) error {
-	url := beego.AppConfig.String("ProtocolAdmin") + beego.AppConfig.String(endpoint) + route
+	endpointURL := beego.AppConfig.String(endpoint)
+	url := protocol + endpointURL + route
 	var response map[string]interface{}
 	var err error
 	err = GetJson(url, &response)
@@ -59,7 +65,8 @@ func GetRequestNew(endpoint string, route string, target interface{}) error {
 
 // Envia una petición a endpoints que responden con el body sin encapsular
 func GetRequestLegacy(endpoint string, route string, target interface{}) error {
-	url := beego.AppConfig.String("ProtocolAdmin") + beego.AppConfig.String(endpoint) + route
+	endpointURL := beego.AppConfig.String(endpoint)
+	url := protocol + endpointURL + route
 	if err := GetJson(url, target); err != nil {
 		return err
 	}
@@ -185,13 +192,13 @@ func ErrorController(c beego.Controller, controller string) {
 		logs.Error(err)
 		localError, ok := err.(map[string]interface{})
 		if !ok {
-			c.Data["mesaage"] = beego.AppConfig.String("appname") + "/" + controller
+			c.Data["mesaage"] = appname + "/" + controller
 			c.Data["data"] = fmt.Sprintf("%v", err)
 			c.Abort("500")
 			return
 		}
 		funcion, _ := localError["funcion"].(string)
-		c.Data["mesaage"] = beego.AppConfig.String("appname") + "/" + controller + "/" + funcion
+		c.Data["mesaage"] = appname + "/" + controller + "/" + funcion
 		c.Data["data"] = localError["err"]
 		if status, ok := localError["status"].(string); ok && status != "" {
 			c.Abort(status)

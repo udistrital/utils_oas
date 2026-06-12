@@ -34,7 +34,8 @@ func HandlePanic(c *beego.Controller) {
 	if r := recover(); r != nil {
 		logs.Error("Panic: ", r)
 		debug.PrintStack()
-		message := fmt.Sprintf("Error service %s: An internal server error occurred.", beego.AppConfig.String("appname"))
+		appname := beego.AppConfig.String("appname")
+		message := fmt.Sprintf("Error service %s: An internal server error occurred.", appname)
 		message += fmt.Sprintf(" Request Info: URL: %s, Method: %s", c.Ctx.Request.URL, c.Ctx.Request.Method)
 		message += " Time: " + time.Now().Format(time.RFC3339)
 		statusCode := http.StatusInternalServerError

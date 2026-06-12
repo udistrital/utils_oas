@@ -23,25 +23,6 @@ var ErrResponseDecode = errors.New("response body could not be decoded into targ
 
 var defaultClient = &http.Client{Timeout: 30 * time.Second}
 
-// doRequest executes req using the provided HTTP client, wrapping the call with
-// an X-Ray subsegment scoped to the request's context. The caller is
-// responsible for closing resp.Body.
-// If the context carries an Authorization value (via WithAuthorization), it is forwarded.
-func doRequest(client *http.Client, req *http.Request) (*http.Response, error) {
-	ctx := req.Context()
-
-	req.Header.Set(acceptHeader, contentTypeJSON)
-	if token, ok := ctx.Value(authorizationKey).(string); ok && token != "" {
-		req.Header.Set(authorizationKey, token)
-	}
-
-	ctx, subseg := xray.BeginSubsegment(ctx, req)
-	resp, err := client.Do(req.WithContext(ctx))
-	xray.CloseSubsegment(subseg, resp, err)
-
-	return resp, err
-}
-
 // GetWithContext makes a GET request to the given URL using the provided context.
 // Checks for non-2xx HTTP status codes, and decodes the response body into target.
 func GetWithContext(ctx context.Context, urlp string, target any) (int, error) {
@@ -200,4 +181,23 @@ func DeleteWithContext(ctx context.Context, urlp string, target any) (int, error
 	}
 
 	return resp.StatusCode, nil
+}
+
+// doRequest executes req using the provided HTTP client, wrapping the call with
+// an X-Ray subsegment scoped to the request's context. The caller is
+// responsible for closing resp.Body.
+// If the context carries an Authorization value (via WithAuthorization), it is forwarded.
+func doRequest(client *http.Client, req *http.Request) (*http.Response, error) {
+	ctx := req.Context()
+
+	req.Header.Set(acceptHeader, contentTypeJSON)
+	if token, ok := ctx.Value(authorizationKey).(string); ok && token != "" {
+		req.Header.Set(authorizationKey, token)
+	}
+
+	ctx, subseg := xray.BeginSubsegment(ctx, req)
+	resp, err := client.Do(req.WithContext(ctx))
+	xray.CloseSubsegment(subseg, resp, err)
+
+	return resp, err
 }

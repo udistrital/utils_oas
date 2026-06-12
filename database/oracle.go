@@ -15,11 +15,14 @@ func BuildOracleConnectionString() (string, error) {
 	baseParameterStore := beego.AppConfig.String("parameterStore")
 	if baseParameterStore == "" {
 		logs.Info("usando credenciales locales para la conexión a la base de datos")
-		conn := formatOracleConnectionString(beego.AppConfig.String("ORuser"), beego.AppConfig.String("ORpass"))
+		user := beego.AppConfig.String("ORuser")
+		pass := beego.AppConfig.String("ORpass")
+		conn := formatOracleConnectionString(user, pass)
 		return conn, nil
 	}
 
-	parameterBasePath := fmt.Sprintf("/%s/%s/db/", baseParameterStore, beego.AppConfig.String("appname"))
+	appname := beego.AppConfig.String("appname")
+	parameterBasePath := fmt.Sprintf("/%s/%s/db/", baseParameterStore, appname)
 
 	ctx := context.Background()
 
@@ -41,10 +44,13 @@ func BuildOracleConnectionString() (string, error) {
 }
 
 func formatOracleConnectionString(username, password string) string {
+	host := beego.AppConfig.String("ORhost")
+	port := beego.AppConfig.String("ORport")
+	service := beego.AppConfig.String("ORservice")
 	return fmt.Sprintf("oracle://%s:%s@%s:%s/%s",
 		username,
 		url.QueryEscape(password),
-		beego.AppConfig.String("ORhost"),
-		beego.AppConfig.String("ORport"),
-		beego.AppConfig.String("ORservice"))
+		host,
+		port,
+		service)
 }

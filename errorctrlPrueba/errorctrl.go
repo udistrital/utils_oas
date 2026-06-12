@@ -13,7 +13,8 @@ func ErrorControlController(c beego.Controller, controller string) {
 	if err := recover(); err != nil {
 		logs.Error(err)
 		localError := err.(map[string]interface{})
-		c.Data["message"] = (beego.AppConfig.String("appname") + "/" + controller + "/" + (localError["funcion"]).(string))
+		appname := beego.AppConfig.String("appname")
+		c.Data["message"] = (appname + "/" + controller + "/" + (localError["funcion"]).(string))
 		c.Data["data"] = (localError["err"])
 		if status, ok := localError["status"]; ok && status != nil {
 			if statusCode, ok := status.(int); ok {
