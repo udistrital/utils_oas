@@ -57,7 +57,12 @@ func configureXRay() error {
 		return fmt.Errorf("error consultando daemon address: %v", err)
 	}
 
-	config := xray.Config{DaemonAddr: daemonAddr}
+	ss, err := xray.NewDefaultStreamingStrategyWithMaxSubsegmentCount(5)
+	if err != nil {
+		return fmt.Errorf("error creando streaming strategy: %v", err)
+	}
+
+	config := xray.Config{DaemonAddr: daemonAddr, StreamingStrategy: ss}
 	if err := xray.Configure(config); err != nil {
 		return fmt.Errorf("error configurando xray: %v", err)
 	}
