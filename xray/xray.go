@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -18,6 +17,31 @@ import (
 	"github.com/aws/aws-xray-sdk-go/v2/xraylog"
 	"github.com/udistrital/utils_oas/ssm"
 )
+
+// xrayLogger routes X-Ray SDK log messages through Beego's logger.
+// It intercepts UDP "message too long" errors and replaces them with a
+// clear warning, since the service continues to work normally when this
+// happens (the trace is dropped but the request is served).
+type xrayLogger struct{}
+
+func (l xrayLogger) Log(level xraylog.LogLevel, msg fmt.Stringer) {
+	s := msg.String()
+	if level == xraylog.LogLevelError && strings.Contains(s, "message too long") {
+		logs.Warning("[xray] Segmento demasiado grande para UDP, el trace fue descartado. " +
+			"Si este aviso es frecuente, reduzca MaxSubsegmentCount en configureXRay.")
+		return
+	}
+	switch level {
+	case xraylog.LogLevelDebug:
+		logs.Debug("[xray] " + s)
+	case xraylog.LogLevelInfo:
+		logs.Info("[xray] " + s)
+	case xraylog.LogLevelWarn:
+		logs.Warning("[xray] " + s)
+	default:
+		logs.Error("[xray] " + s)
+	}
+}
 
 const (
 	segmentKey string = "xray_seg"
@@ -67,7 +91,7 @@ func configureXRay() error {
 		return fmt.Errorf("error configurando xray: %v", err)
 	}
 
-	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelInfo))
+	xray.SetLogger(xrayLogger{})
 	logs.Info("X-Ray inicializado correctamente")
 
 	return nil
@@ -75,6 +99,19 @@ func configureXRay() error {
 
 // Función que crea el segmento principal asociado a la petición entrante
 // y lo almacena en el contexto de la petición para su posterior uso en subsegmentos
+
+// maxURLLen is the maximum number of bytes stored in any URL field of a
+// segment or subsegment. Keeping this well under the ~64 KB UDP limit
+// ensures that even a single streamed subsegment fits in one datagram.
+const maxURLLen = 2048
+
+func truncateURL(u string) string {
+	if len(u) > maxURLLen {
+		logs.Warning("[xray] URL demasiado larga (%d bytes), será truncada a %d bytes. URL completa: %s", len(u), maxURLLen, u)
+		return u[:maxURLLen]
+	}
+	return u
+}
 
 func beginSegment(ctx *beegoCtx.Context) {
 	host := ctx.Input.Context.Request.Host
@@ -87,7 +124,7 @@ func beginSegment(ctx *beegoCtx.Context) {
 		env = "_test"
 	}
 
-	url := ctx.Input.Scheme() + "://" + host + ctx.Input.Context.Request.URL.String()
+	url := truncateURL(ctx.Input.Scheme() + "://" + host + ctx.Input.Context.Request.URL.String())
 	method := ctx.Request.Method
 	reqCtx, seg := xray.BeginSegment(ctx.Request.Context(), appName+env)
 	seg.HTTP = &xray.HTTPData{
@@ -152,7 +189,7 @@ func BeginSubsegment(ctx context.Context, req *http.Request) (context.Context, *
 	ctx, subseg := xray.BeginSubsegment(ctx, req.Host)
 	subseg.Namespace = "remote"
 	subseg.HTTP = &xray.HTTPData{
-		Request: &xray.RequestData{Method: req.Method, URL: req.URL.String()},
+		Request: &xray.RequestData{Method: req.Method, URL: truncateURL(req.URL.String())},
 	}
 	req.Header.Set(traceIDKey, subseg.DownstreamHeader().String())
 
