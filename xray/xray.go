@@ -216,7 +216,7 @@ func CloseSubsegment(subseg *xray.Segment, resp *http.Response, err error) {
 	}
 
 	xray.HttpCaptureResponse(subseg, statusCode)
-	subseg.Close(err)
+	subseg.CloseAndStream(err)
 }
 
 func BeginSegmentSec(req *http.Request) (context.Context, *xray.Segment) {
