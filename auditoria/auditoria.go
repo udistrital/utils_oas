@@ -3,7 +3,6 @@ package auditoria
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -37,20 +36,21 @@ type usuario struct {
 }
 
 type requestLog struct {
-	AppName      string         `json:"app_name"`
-	Agent        string         `json:"agent,omitempty"`
-	Data         map[string]any `json:"data"`
-	Date         string         `json:"date"`
-	Host         string         `json:"host"`
-	IPUser       string         `json:"ip_user"`
-	Method       string         `json:"method"`
-	Path         string         `json:"path"`
-	Query        string         `json:"query,omitempty"`
-	Schema       string         `json:"schema,omitempty"`
-	SQLStatement string         `json:"sql_statement,omitempty"`
-	Status       int            `json:"status"`
-	TraceID      string         `json:"trace_id,omitempty"`
-	User         string         `json:"user"`
+	AppName       string         `json:"app_name"`
+	Agent         string         `json:"agent,omitempty"`
+	Data          map[string]any `json:"data,omitempty"`
+	Date          string         `json:"date"`
+	Host          string         `json:"host"`
+	IPUser        string         `json:"ip_user"`
+	Method        string         `json:"method"`
+	Path          string         `json:"path"`
+	RouterPattern string         `json:"router_pattern,omitempty"`
+	Query         string         `json:"query,omitempty"`
+	Schema        string         `json:"schema,omitempty"`
+	SQLStatement  string         `json:"sql_statement,omitempty"`
+	Status        int            `json:"status"`
+	TraceID       string         `json:"trace_id,omitempty"`
+	User          string         `json:"user"`
 }
 
 // customSQLLogger intercepts beego ORM debug output to capture the last executed
@@ -133,21 +133,25 @@ func logRequestWithLogger(ctx *beegoCtx.Context, logger *customSQLLogger) {
 		status = http.StatusOK
 	}
 
+	routerPattern, _ := ctx.Input.GetData("RouterPattern").(string)
+	body, _ := ctx.Input.GetData("json").(map[string]any)
+
 	entry := requestLog{
-		AppName:      appName,
-		Agent:        ctx.Input.UserAgent(),
-		Data:         sanitizeInputData(ctx.Input.Data()),
-		Date:         time.Now().Format(time.RFC3339),
-		Host:         ctx.Request.Host,
-		IPUser:       ctx.Input.IP(),
-		Method:       ctx.Request.Method,
-		Path:         ctx.Request.URL.Path,
-		Query:        ctx.Request.URL.RawQuery,
-		Schema:       ctx.Input.Scheme(),
-		SQLStatement: logger.GetLastQuery(),
-		Status:       status,
-		TraceID:      xray.TraceID(ctx.Request.Context()),
-		User:         user,
+		AppName:       appName,
+		Agent:         ctx.Input.UserAgent(),
+		Data:          body,
+		Date:          time.Now().Format(time.RFC3339),
+		Host:          ctx.Request.Host,
+		IPUser:        ctx.Input.IP(),
+		Method:        ctx.Request.Method,
+		Path:          ctx.Request.URL.Path,
+		RouterPattern: routerPattern,
+		Query:         ctx.Request.URL.RawQuery,
+		Schema:        ctx.Input.Scheme(),
+		SQLStatement:  logger.GetLastQuery(),
+		Status:        status,
+		TraceID:       xray.TraceID(ctx.Request.Context()),
+		User:          user,
 	}
 
 	if jsonData, err := json.Marshal(entry); err != nil {
@@ -157,19 +161,6 @@ func logRequestWithLogger(ctx *beegoCtx.Context, logger *customSQLLogger) {
 	}
 }
 
-func sanitizeInputData(input any) map[string]any {
-	switch data := input.(type) {
-	case map[string]any:
-		return data
-	case map[any]any:
-		converted := make(map[string]any, len(data))
-		for k, v := range data {
-			converted[fmt.Sprintf("%v", k)] = v
-		}
-		return converted
-	}
-	return nil
-}
 func (l *customSQLLogger) Write(p []byte) (int, error) {
 	logMessage := string(p)
 
