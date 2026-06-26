@@ -134,7 +134,7 @@ func EndSegment(ctx *beegoCtx.Context) {
 // BeginSubsegment starts an X-Ray subsegment for an outgoing HTTP request.
 // It sets the trace propagation header on req and returns the updated context and subsegment
 func BeginSubsegment(ctx context.Context, req *http.Request) (context.Context, *xray.Segment) {
-	if xray.GetSegment(ctx) == nil || req == nil {
+	if ctx == nil || xray.GetSegment(ctx) == nil || req == nil {
 		return ctx, nil
 	}
 
