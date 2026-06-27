@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-xray-sdk-go/v2/header"
 	"github.com/aws/aws-xray-sdk-go/v2/xray"
 	"github.com/aws/aws-xray-sdk-go/v2/xraylog"
-	"github.com/udistrital/utils_oas/ssm"
 )
 
 const (
@@ -47,14 +46,8 @@ func InitXRay() error {
 // configureXRay performs the core X-Ray initialization and configuration.
 // Returns an error if configuration fails, or nil if X-Ray is not configured or succeeds.
 func configureXRay() error {
-	parameterStore := beego.AppConfig.String("parameterStore")
-	if parameterStore == "" {
-		return fmt.Errorf("no se puede consultar daemon address: %v", errors.New("parameterStore no configurado"))
-	}
-
-	daemonAddr, err := ssm.GetValueFromParameterStore(context.Background(), fmt.Sprintf("/%s/utils/xray/DaemonAddr", parameterStore))
-	if err != nil {
-		return fmt.Errorf("error consultando daemon address: %v", err)
+	if os.Getenv("AWS_XRAY_DAEMON_ADDRESS") == "" {
+		return fmt.Errorf("x-ray daemon address not set in environment variable AWS_XRAY_DAEMON_ADDRESS")
 	}
 
 	ss, err := xray.NewDefaultStreamingStrategyWithMaxSubsegmentCount(5)
@@ -62,7 +55,7 @@ func configureXRay() error {
 		return fmt.Errorf("error creando streaming strategy: %v", err)
 	}
 
-	config := xray.Config{DaemonAddr: daemonAddr, StreamingStrategy: ss}
+	config := xray.Config{StreamingStrategy: ss}
 	if err := xray.Configure(config); err != nil {
 		return fmt.Errorf("error configurando xray: %v", err)
 	}
