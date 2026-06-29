@@ -138,9 +138,9 @@ func _doReq(method string, url string, body io.Reader) (interface{}, error) {
 	}
 	// ? Realizar la petición
 	client := &http.Client{}
-	ctx, seg := xray.BeginSegmentSec(req)
-	resp, err := client.Do(req.WithContext(ctx))
-	xray.CloseSubsegment(seg, resp, err)
+	subseg := xray.BeginSegmentSec(req)
+	resp, err := client.Do(req)
+	xray.CloseSubsegment(subseg, resp, err)
 	if err != nil {
 		return nil, err
 	}

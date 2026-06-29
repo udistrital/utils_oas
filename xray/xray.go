@@ -171,6 +171,7 @@ func CloseSubsegment(subseg *xray.Segment, resp *http.Response, err error) {
 	subseg.Close(err)
 }
 
-func BeginSegmentSec(req *http.Request) (context.Context, *xray.Segment) {
-	return BeginSubsegment(globalCtx, req)
+func BeginSegmentSec(req *http.Request) *xray.Segment {
+	_, seg := BeginSubsegment(globalCtx, req)
+	return seg
 }
