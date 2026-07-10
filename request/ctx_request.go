@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/udistrital/utils_oas/xray"
+	"github.com/udistrital/utils_oas/v2/xray"
 )
 
 const (
@@ -186,7 +186,7 @@ func DeleteWithContext(ctx context.Context, urlp string, target any) (int, error
 // doRequest executes req using the provided HTTP client, wrapping the call with
 // an X-Ray subsegment scoped to the request's context. The caller is
 // responsible for closing resp.Body.
-// If the context carries an Authorization value (via WithAuthorization), it is forwarded.
+// If the context carries an Authorization token stored under authorizationKey, it is forwarded.
 func doRequest(client *http.Client, req *http.Request) (*http.Response, error) {
 	ctx := req.Context()
 

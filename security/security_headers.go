@@ -1,8 +1,8 @@
 package security
 
 import (
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/context"
+	beego "github.com/beego/beego/v2/server/web"
+	"github.com/beego/beego/v2/server/web/context"
 )
 
 var securityHeadersMap = map[string]string{
@@ -19,7 +19,7 @@ var securityHeadersMap = map[string]string{
 }
 
 func SetSecurityHeaders() {
-	beego.InsertFilter("*", beego.BeforeExec, securityHeaders, false)
+	beego.InsertFilter("*", beego.BeforeExec, securityHeaders)
 }
 
 func securityHeaders(ctx *context.Context) {

@@ -6,22 +6,22 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/logs"
-	"github.com/udistrital/utils_oas/ssm"
+	"github.com/beego/beego/v2/core/logs"
+	beego "github.com/beego/beego/v2/server/web"
+	"github.com/udistrital/utils_oas/v2/ssm"
 )
 
 func BuildPostgresConnectionString() (string, error) {
-	baseParameterStore := beego.AppConfig.String("parameterStore")
+	baseParameterStore, _ := beego.AppConfig.String("parameterStore")
 	if baseParameterStore == "" {
 		logs.Info("usando credenciales locales para la conexión a la base de datos")
-		user := beego.AppConfig.String("PGuser")
-		pass := beego.AppConfig.String("PGpass")
+		user, _ := beego.AppConfig.String("PGuser")
+		pass, _ := beego.AppConfig.String("PGpass")
 		conn := formatPostgresConnectionString(user, pass)
 		return conn, nil
 	}
 
-	appname := beego.AppConfig.String("appname")
+	appname, _ := beego.AppConfig.String("appname")
 	parameterBasePath := fmt.Sprintf("/%s/%s/db/", baseParameterStore, appname)
 
 	ctx := context.Background()
@@ -44,10 +44,10 @@ func BuildPostgresConnectionString() (string, error) {
 }
 
 func formatPostgresConnectionString(username, password string) string {
-	host := beego.AppConfig.String("PGhost")
-	port := beego.AppConfig.String("PGport")
-	db := beego.AppConfig.String("PGdb")
-	schema := beego.AppConfig.String("PGschema")
+	host, _ := beego.AppConfig.String("PGhost")
+	port, _ := beego.AppConfig.String("PGport")
+	db, _ := beego.AppConfig.String("PGdb")
+	schema, _ := beego.AppConfig.String("PGschema")
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?search_path=%s&sslmode=disable",
 		username,
 		url.QueryEscape(password),

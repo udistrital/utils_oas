@@ -10,20 +10,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/cache"
-	beegoCtx "github.com/astaxie/beego/context"
-	"github.com/astaxie/beego/logs"
-	"github.com/astaxie/beego/orm"
 	"github.com/aws/aws-xray-sdk-go/v2/xray"
+	"github.com/beego/beego/v2/client/cache"
+	"github.com/beego/beego/v2/client/orm"
+	"github.com/beego/beego/v2/core/logs"
+	beego "github.com/beego/beego/v2/server/web"
+	beegoCtx "github.com/beego/beego/v2/server/web/context"
 )
 
 const (
 	authorizationKey = "Authorization"
 	userKey          = "user"
+	userInfoURL      = "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo"
 )
 
-var appName = beego.AppConfig.String("appname")
+var appName, _ = beego.AppConfig.String("appname")
 var globalLogger = &customSQLLogger{}
 var authHTTPClient = &http.Client{Timeout: 30 * time.Second}
 var c cache.Cache
@@ -83,7 +84,7 @@ func InitMiddleware() {
 	logs.Info("middleware inicializado correctamente.")
 
 	beego.InsertFilter("/:version/*", beego.BeforeExec, validateAndSetAuth)
-	beego.InsertFilter("/:version/*", beego.AfterExec, LogRequest, false)
+	beego.InsertFilter("/:version/*", beego.AfterExec, LogRequest, beego.WithReturnOnOutput(false))
 }
 
 func validateAndSetAuth(ctx *beegoCtx.Context) {
@@ -104,21 +105,23 @@ func validateAndSetAuth(ctx *beegoCtx.Context) {
 		return
 	}
 
-	cachedUser := c.Get(token)
-	if user, ok := cachedUser.(string); ok && user != "" {
-		ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, user))
-		return
+	cachedUser, err := c.Get(reqCtx, token)
+	if err == nil {
+		if user, ok := cachedUser.(string); ok && user != "" {
+			ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, user))
+			return
+		}
 	}
 
 	var user usuario
-	if status, err := getWithContext(reqCtx, "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &user); err != nil {
+	if status, err := getWithContext(reqCtx, &user); err != nil {
 		logs.Error("error al validar el token: %v, status %d", err, status)
 		// debería retornar 401
 		// ctx.Abort(401, "unauthorized")
 		return
 	}
 
-	if err := c.Put(token, user.Sub, 60*time.Minute); err != nil {
+	if err := c.Put(reqCtx, token, user.Sub, 60*time.Minute); err != nil {
 		logs.Error("error al guardar el token el cache:", err)
 		return
 	}
@@ -175,8 +178,8 @@ func sanitizeInputData(input any) map[string]any {
 	return nil
 }
 
-func getWithContext(ctx context.Context, urlp string, target any) (int, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlp, nil)
+func getWithContext(ctx context.Context, target any) (int, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userInfoURL, nil)
 	if err != nil {
 		return 0, fmt.Errorf("could not create request: %w", err)
 	}

@@ -10,13 +10,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/astaxie/beego"
-	beegoCtx "github.com/astaxie/beego/context"
-	"github.com/astaxie/beego/logs"
 	"github.com/aws/aws-xray-sdk-go/v2/header"
 	"github.com/aws/aws-xray-sdk-go/v2/xray"
 	"github.com/aws/aws-xray-sdk-go/v2/xraylog"
-	"github.com/udistrital/utils_oas/ssm"
+	"github.com/beego/beego/v2/core/logs"
+	beego "github.com/beego/beego/v2/server/web"
+	beegoCtx "github.com/beego/beego/v2/server/web/context"
+	"github.com/udistrital/utils_oas/v2/ssm"
 )
 
 const (
@@ -24,7 +24,7 @@ const (
 	traceIDKey string = "X-Amzn-Trace-Id"
 )
 
-var appName = beego.AppConfig.String("appname")
+var appName, _ = beego.AppConfig.String("appname")
 var globalCtx context.Context
 
 func Init() {
@@ -40,14 +40,14 @@ func InitXRay() error {
 	}
 
 	beego.InsertFilter("/:version/*", beego.BeforeExec, beginSegment)
-	beego.InsertFilter("/:version/*", beego.AfterExec, EndSegment, false)
+	beego.InsertFilter("/:version/*", beego.AfterExec, EndSegment, beego.WithReturnOnOutput(false))
 	return nil
 }
 
 // configureXRay performs the core X-Ray initialization and configuration.
 // Returns an error if configuration fails, or nil if X-Ray is not configured or succeeds.
 func configureXRay() error {
-	parameterStore := beego.AppConfig.String("parameterStore")
+	parameterStore, _ := beego.AppConfig.String("parameterStore")
 	if parameterStore == "" {
 		return fmt.Errorf("no se puede consultar daemon address: %v", errors.New("parameterStore no configurado"))
 	}

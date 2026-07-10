@@ -1,27 +1,43 @@
-package customerror
+package customerrorv2
 
 import (
-	"github.com/astaxie/beego"
-	"github.com/udistrital/utils_oas/auditoria"
-	"github.com/udistrital/utils_oas/xray"
+	beego "github.com/beego/beego/v2/server/web"
+	"github.com/udistrital/utils_oas/v2/auditoria"
+	"github.com/udistrital/utils_oas/v2/xray"
 )
 
 type CustomErrorController struct {
 	beego.Controller
 }
 
-func (c *CustomErrorController) Error400() {
-	outputError := map[string]any{"Status": "400", "Message": "The request contains incorrect syntax", "System": c.Data["system"], "Development": c.Data["development"]}
+func genericError(c *CustomErrorController, status string) {
+	outputError := map[string]interface{}{"Success": false, "Status": status, "Message": c.Data["mesaage"], "Data": c.Data["data"]}
+	c.Data["json"] = outputError
 	xray.EndSegment(c.Ctx)
 	auditoria.LogRequest(c.Ctx)
-	c.Data["json"] = outputError
 	c.ServeJSON()
 }
 
+func (c *CustomErrorController) Error400() {
+	genericError(c, "400")
+}
+
 func (c *CustomErrorController) Error404() {
-	outputError := map[string]any{"Status": "404", "Message": "Not found resource", "System": c.Data["system"], "Development": c.Data["development"]}
-	xray.EndSegment(c.Ctx)
-	auditoria.LogRequest(c.Ctx)
-	c.Data["json"] = outputError
-	c.ServeJSON()
+	genericError(c, "404")
+}
+
+func (c *CustomErrorController) Error500() {
+	genericError(c, "500")
+}
+
+func (c *CustomErrorController) Error501() {
+	genericError(c, "501")
+}
+
+func (c *CustomErrorController) Error502() {
+	genericError(c, "502")
+}
+
+func (c *CustomErrorController) Error509() {
+	genericError(c, "509")
 }
