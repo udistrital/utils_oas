@@ -16,7 +16,6 @@ import (
 	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/orm"
 	"github.com/aws/aws-xray-sdk-go/v2/xray"
-	"github.com/udistrital/utils_oas/request"
 )
 
 const (
@@ -26,6 +25,7 @@ const (
 
 var appName = beego.AppConfig.String("appname")
 var globalLogger = &customSQLLogger{}
+var authHTTPClient = &http.Client{Timeout: 30 * time.Second}
 var c cache.Cache
 
 type usuario struct {
@@ -87,19 +87,23 @@ func InitMiddleware() {
 }
 
 func validateAndSetAuth(ctx *beegoCtx.Context) {
-	// skip token validation in local environment
-	if strings.HasPrefix(ctx.Input.Context.Request.Host, "localhost") {
-		return
-	}
-
 	token := ctx.Request.Header.Get(authorizationKey)
 	if token == "" {
+		if strings.HasPrefix(ctx.Input.Context.Request.Host, "localhost") {
+			return
+		}
 		// debería retornar 401
+		logs.Warn("missing access token")
 		// ctx.Abort(401, "unauthorized")
 		return
 	}
 
 	reqCtx := context.WithValue(ctx.Request.Context(), authorizationKey, token)
+
+	if strings.HasPrefix(ctx.Input.Context.Request.Host, "localhost") {
+		return
+	}
+
 	cachedUser := c.Get(token)
 	if user, ok := cachedUser.(string); ok && user != "" {
 		ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, user))
@@ -107,7 +111,7 @@ func validateAndSetAuth(ctx *beegoCtx.Context) {
 	}
 
 	var user usuario
-	if status, err := request.GetWithContext(reqCtx, "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &user); err != nil {
+	if status, err := getWithContext(reqCtx, "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo", &user); err != nil {
 		logs.Error("error al validar el token: %v, status %d", err, status)
 		// debería retornar 401
 		// ctx.Abort(401, "unauthorized")
@@ -170,6 +174,35 @@ func sanitizeInputData(input any) map[string]any {
 	}
 	return nil
 }
+
+func getWithContext(ctx context.Context, urlp string, target any) (int, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlp, nil)
+	if err != nil {
+		return 0, fmt.Errorf("could not create request: %w", err)
+	}
+
+	req.Header.Set("Accept", "application/json")
+	if token, ok := ctx.Value(authorizationKey).(string); ok && token != "" {
+		req.Header.Set(authorizationKey, token)
+	}
+
+	resp, err := authHTTPClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusIMUsed {
+		return resp.StatusCode, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
+		return resp.StatusCode, fmt.Errorf("response body could not be decoded into target: %w", err)
+	}
+
+	return resp.StatusCode, nil
+}
+
 func (l *customSQLLogger) Write(p []byte) (int, error) {
 	logMessage := string(p)
 
