@@ -114,7 +114,7 @@ func validateAndSetAuth(ctx *beegoCtx.Context) {
 	}
 
 	var user usuario
-	if status, err := getWithContext(reqCtx, &user); err != nil {
+	if status, err := getUserInfo(reqCtx, &user); err != nil {
 		logs.Error("error al validar el token: %v, status %d", err, status)
 		// debería retornar 401
 		// ctx.Abort(401, "unauthorized")
@@ -136,6 +136,10 @@ func logRequestWithLogger(ctx *beegoCtx.Context, logger *customSQLLogger) {
 	user, _ := ctx.Request.Context().Value(userKey).(string)
 
 	status := ctx.ResponseWriter.Status
+	if status == 0 {
+		status = ctx.Output.Status
+	}
+
 	if status == 0 {
 		status = http.StatusOK
 	}
@@ -178,7 +182,7 @@ func sanitizeInputData(input any) map[string]any {
 	return nil
 }
 
-func getWithContext(ctx context.Context, target any) (int, error) {
+func getUserInfo(ctx context.Context, target any) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, userInfoURL, nil)
 	if err != nil {
 		return 0, fmt.Errorf("could not create request: %w", err)
