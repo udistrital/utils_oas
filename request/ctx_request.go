@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/udistrital/utils_oas/v2/xray"
@@ -17,6 +18,8 @@ const (
 	contentTypeKey   = "Content-Type"
 	acceptHeader     = "Accept"
 	contentTypeJSON  = "application/json"
+
+	totalCountHeader = "X-Total-Count"
 )
 
 var ErrResponseDecode = errors.New("response body could not be decoded into target")
@@ -26,27 +29,43 @@ var defaultClient = &http.Client{Timeout: 30 * time.Second}
 // GetWithContext makes a GET request to the given URL using the provided context.
 // Checks for non-2xx HTTP status codes, and decodes the response body into target.
 func GetWithContext(ctx context.Context, urlp string, target any) (int, error) {
+	status, _, err := getWithHeaders(ctx, urlp, target)
+	return status, err
+}
+
+func GetWithTotalCount(ctx context.Context, urlp string, target any) (status, total int, err error) {
+	status, header, err := getWithHeaders(ctx, urlp, target)
+	if err != nil {
+		return status, 0, err
+	}
+
+	total, _ = strconv.Atoi(header.Get(totalCountHeader))
+
+	return status, total, nil
+}
+
+func getWithHeaders(ctx context.Context, urlp string, target any) (int, http.Header, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlp, nil)
 	if err != nil {
-		return 0, fmt.Errorf("could not create request: %w", err)
+		return 0, nil, fmt.Errorf("could not create request: %w", err)
 	}
 
 	resp, err := doRequest(defaultClient, req)
 	if err != nil {
-		return 0, fmt.Errorf("request failed: %w", err)
+		return 0, nil, fmt.Errorf("request failed: %w", err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusIMUsed {
-		return resp.StatusCode, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return resp.StatusCode, resp.Header, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
-		return resp.StatusCode, fmt.Errorf("%w: %w", ErrResponseDecode, err)
+		return resp.StatusCode, resp.Header, fmt.Errorf("%w: %w", ErrResponseDecode, err)
 	}
 
-	return resp.StatusCode, nil
+	return resp.StatusCode, resp.Header, nil
 }
 
 // PostWithContext makes a POST request to the given URL using the provided context.
