@@ -57,22 +57,45 @@ type requestLog struct {
 // customSQLLogger intercepts beego ORM debug output to capture the last executed
 // SQL statement for audit logging.
 //
-// NOTE: beego v1's ORM logger is global — there is no way to associate a query
-// with a specific request. As a result this implementation captures only the
-// last query written globally, which is inaccurate under concurrent load.
-// A mutex makes reads/writes race-safe, but the value may still belong to a
-// different request.
+// NOTE: the ORM logger is global — there is no way to associate a query with a
+// specific request. As a result this implementation captures only the last
+// query written globally. A mutex makes reads/writes race-safe, but under
+// concurrent load the captured value may belong to a different request, so an
+// audit entry can attribute another caller's query to this user.
 //
-// With beego v2 this is properly solvable: use orm.AddGlobalFilterChain with
-// an orm.Filter that receives the context.Context, and store queries per-request
-// using context.WithValue. Handlers must call o.WithContext(ctx) for the
-// association to work.
+// This cannot be fixed in place. beego's only source of SQL text is
+// debugLogQueies, which takes no context.Context, so neither orm.DebugLog nor
+// the orm.LogFunc hook can ever be request-scoped. orm.AddGlobalFilterChain
+// does provide a context.Context, but its orm.Invocation exposes only Method,
+// Args and GetTableName() — never the rendered SQL.
+//
+// Fixing it therefore means choosing what to record:
+//   - Log operations instead of SQL: register an orm.FilterChain that appends
+//     {Method, GetTableName(), duration} to a recorder held in the request
+//     context. Correct per-request association; loses the literal statement.
+//   - Keep the literal SQL: wrap the database/sql driver with one implementing
+//     driver.QueryerContext and driver.ExecerContext, which receive both the
+//     query string and the context. Requires changes in the database package.
+//
+// Either way, callers must use the ctx-aware ORM methods (ReadWithCtx,
+// InsertWithCtx, AllWithCtx, CountWithCtx, ...) passing the request context;
+// queries issued through the non-ctx methods are silently not recorded. Note
+// that QueryTableWithCtx and QueryM2MWithCtx are deprecated no-ops for context
+// — on a QuerySeter chain the context belongs on the terminal call.
 type customSQLLogger struct {
 	mu        sync.Mutex
 	lastQuery string
 }
 
+func InitWithAuthEnforcer() {
+	configureMiddleware(true)
+}
+
 func InitMiddleware() {
+	configureMiddleware(false)
+}
+
+func configureMiddleware(enforceAuth bool) {
 	var err error
 	c, err = cache.NewCache("memory", `{"interval":300}`)
 	if err != nil {
@@ -83,28 +106,23 @@ func InitMiddleware() {
 	orm.DebugLog = orm.NewLog(globalLogger)
 	logs.Info("middleware inicializado correctamente.")
 
-	beego.InsertFilter("/:version/*", beego.BeforeExec, validateAndSetAuth)
+	beego.InsertFilter("/:version/*", beego.BeforeExec, func(ctx *beegoCtx.Context) { resolveUser(ctx, enforceAuth) })
 	beego.InsertFilter("/:version/*", beego.AfterExec, LogRequest, beego.WithReturnOnOutput(false))
 }
 
-func validateAndSetAuth(ctx *beegoCtx.Context) {
+func resolveUser(ctx *beegoCtx.Context, enforceAuth bool) {
 	token := ctx.Request.Header.Get(authorizationKey)
 	if token == "" {
-		if strings.HasPrefix(ctx.Input.Context.Request.Host, "localhost") {
-			return
+		if enforceAuth && beego.BConfig.RunMode != beego.DEV {
+			logs.Warn("missing access token")
+			ctx.Input.SetData("message", "unauthorized")
+			ctx.Abort(401, "401")
 		}
-		// debería retornar 401
-		logs.Warn("missing access token")
-		// ctx.Abort(401, "unauthorized")
+
 		return
 	}
 
 	reqCtx := context.WithValue(ctx.Request.Context(), authorizationKey, token)
-
-	if strings.HasPrefix(ctx.Input.Context.Request.Host, "localhost") {
-		return
-	}
-
 	cachedUser, err := c.Get(reqCtx, token)
 	if err == nil {
 		if user, ok := cachedUser.(string); ok && user != "" {
@@ -116,23 +134,21 @@ func validateAndSetAuth(ctx *beegoCtx.Context) {
 	var user usuario
 	if status, err := getUserInfo(reqCtx, &user); err != nil {
 		logs.Error("error al validar el token: %v, status %d", err, status)
-		// debería retornar 401
-		// ctx.Abort(401, "unauthorized")
+		if enforceAuth {
+			ctx.Input.SetData("message", "unauthorized")
+			ctx.Abort(401, "401")
+		}
 		return
 	}
 
 	if err := c.Put(reqCtx, token, user.Sub, 60*time.Minute); err != nil {
-		logs.Error("error al guardar el token el cache:", err)
-		return
+		logs.Warn("error al guardar el token el cache:", err)
 	}
+
 	ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, user.Sub))
 }
 
 func LogRequest(ctx *beegoCtx.Context) {
-	logRequestWithLogger(ctx, globalLogger)
-}
-
-func logRequestWithLogger(ctx *beegoCtx.Context, logger *customSQLLogger) {
 	user, _ := ctx.Request.Context().Value(userKey).(string)
 
 	status := ctx.ResponseWriter.Status
@@ -155,7 +171,7 @@ func logRequestWithLogger(ctx *beegoCtx.Context, logger *customSQLLogger) {
 		Path:         ctx.Request.URL.Path,
 		Query:        ctx.Request.URL.RawQuery,
 		Schema:       ctx.Input.Scheme(),
-		SQLStatement: logger.GetLastQuery(),
+		SQLStatement: globalLogger.GetLastQuery(),
 		Status:       status,
 		TraceID:      xray.TraceID(ctx.Request.Context()),
 		User:         user,

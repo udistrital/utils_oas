@@ -1,6 +1,7 @@
-package customerrorv2
+package customerror
 
 import (
+	"github.com/beego/beego/v2/core/logs"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/udistrital/utils_oas/v2/auditoria"
 	"github.com/udistrital/utils_oas/v2/xray"
@@ -11,15 +12,22 @@ type CustomErrorController struct {
 }
 
 func genericError(c *CustomErrorController, status string) {
-	outputError := map[string]interface{}{"Success": false, "Status": status, "Message": c.Data["mesaage"], "Data": c.Data["data"]}
+	outputError := map[string]interface{}{"Success": false, "Status": status, "Message": c.Data["message"], "Data": c.Data["data"]}
 	c.Data["json"] = outputError
 	xray.EndSegment(c.Ctx)
 	auditoria.LogRequest(c.Ctx)
-	c.ServeJSON()
+
+	if err := c.ServeJSON(); err != nil {
+		logs.Error("error al serializar la respuesta de error: %v", err)
+	}
 }
 
 func (c *CustomErrorController) Error400() {
 	genericError(c, "400")
+}
+
+func (c *CustomErrorController) Error401() {
+	genericError(c, "401")
 }
 
 func (c *CustomErrorController) Error404() {
