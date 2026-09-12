@@ -151,13 +151,12 @@ func resolveUser(ctx *beegoCtx.Context, enforceAuth bool) {
 func LogRequest(ctx *beegoCtx.Context) {
 	user, _ := ctx.Request.Context().Value(userKey).(string)
 
-	status := ctx.ResponseWriter.Status
-	if status == 0 {
-		status = ctx.Output.Status
-	}
+	status := http.StatusOK
 
-	if status == 0 {
-		status = http.StatusOK
+	if ctx.ResponseWriter.Status != 0 {
+		status = ctx.ResponseWriter.Status
+	} else if ctx.Output.Status != 0 {
+		status = ctx.Output.Status
 	}
 
 	entry := requestLog{
