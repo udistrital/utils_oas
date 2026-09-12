@@ -22,6 +22,10 @@ func (c *CustomErrorController) Error400() {
 	genericError(c, "400")
 }
 
+func (c *CustomErrorController) Error401() {
+	genericError(c, "401")
+}
+
 func (c *CustomErrorController) Error404() {
 	genericError(c, "404")
 }

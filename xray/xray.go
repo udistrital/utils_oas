@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/astaxie/beego"
@@ -114,17 +113,12 @@ func EndSegment(ctx *beegoCtx.Context) {
 		return
 	}
 
-	status := ctx.ResponseWriter.Status
-	if jsonMap, ok := ctx.Input.GetData("json").(map[string]any); ok {
-		if s, ok := jsonMap["Status"].(string); ok {
-			if num, err := strconv.Atoi(s); err == nil {
-				status = num
-			}
-		}
-	}
+	status := http.StatusOK
 
-	if status == 0 {
-		status = http.StatusOK
+	if ctx.ResponseWriter.Status != 0 {
+		status = ctx.ResponseWriter.Status
+	} else if ctx.Output.Status != 0 {
+		status = ctx.Output.Status
 	}
 
 	xray.HttpCaptureResponse(seg, status)
