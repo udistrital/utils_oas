@@ -57,14 +57,21 @@ func ErrorControlController(c beego.Controller, controller string) {
 }
 
 // ErrorControlFunction recovers an error and repanics it using the standard structure.
-func ErrorControlFunction(funcion string, status string) {
+func ErrorControlFunction(funcion string, status any) {
 	if err := recover(); err != nil {
-		panic(Error(funcion, err, status))
+		switch localStatus := status.(type) {
+		case string:
+			panic(Error(funcion, err, localStatus))
+		case int:
+			panic(Error(funcion, err, localStatus))
+		default:
+			panic(Error(funcion, err, http.StatusInternalServerError))
+		}
 	}
 }
 
 // Error returns an error using the standard structure.
-func Error(funcion string, err any, status string) (outputError map[string]any) {
+func Error(funcion string, err any, status any) map[string]any {
 	switch localError := err.(type) {
 	case map[string]any:
 		if fun, ok := localError["funcion"].(string); ok {
@@ -73,10 +80,20 @@ func Error(funcion string, err any, status string) (outputError map[string]any) 
 		if internalError, ok := localError["err"]; ok {
 			err = internalError
 		}
+
 	case string:
 		err = localError
 	case error:
 		err = localError.Error()
+	}
+
+	switch localStatus := status.(type) {
+	case string:
+		status = localStatus
+	case int:
+		status = localStatus
+	default:
+		status = http.StatusInternalServerError
 	}
 
 	return map[string]any{
