@@ -18,13 +18,16 @@ func ErrorControlController(c beego.Controller, controller string) {
 		data := normalizeError(err)
 		statusCode := http.StatusInternalServerError
 
-		if localError, ok := err.(map[string]interface{}); ok {
+		switch localError := err.(type) {
+		case map[string]any:
 			if funcion, ok := localError["funcion"].(string); ok {
 				message += "/" + funcion
 			}
+
 			if localData, ok := localError["err"]; ok {
 				data = normalizeError(localData)
 			}
+
 			switch status := localError["status"].(type) {
 			case int:
 				statusCode = status
@@ -33,17 +36,20 @@ func ErrorControlController(c beego.Controller, controller string) {
 					statusCode = parsedStatus
 				}
 			}
+		case string:
+			data = localError
+		case error:
+			data = localError.Error()
 		}
 
-		c.Data["message"] = message
-		c.Data["data"] = data
 		c.Ctx.Output.SetStatus(statusCode)
-		c.Data["json"] = map[string]interface{}{
+		c.Data["json"] = map[string]any{
 			"Data":    data,
 			"Message": message,
 			"Status":  strconv.Itoa(statusCode),
 			"Success": false,
 		}
+
 		if err := c.ServeJSON(); err != nil {
 			logs.Error("error al serializar la respuesta de error: %v", err)
 		}
@@ -58,23 +64,35 @@ func ErrorControlFunction(funcion string, status string) {
 }
 
 // Error returns an error using the standard structure.
-func Error(funcion string, err interface{}, status string) (outputError map[string]interface{}) {
+func Error(funcion string, err any, status string) (outputError map[string]any) {
 	switch localError := err.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		if fun, ok := localError["funcion"].(string); ok {
 			funcion += "/" + fun
 		}
 		if internalError, ok := localError["err"]; ok {
 			err = internalError
 		}
+	case string:
+		err = localError
+	case error:
+		err = localError.Error()
 	}
 
-	return map[string]interface{}{"funcion": funcion, "err": normalizeError(err), "status": status}
+	return map[string]any{
+		"funcion": funcion,
+		"err":     normalizeError(err),
+		"status":  status,
+	}
 }
 
-func normalizeError(err interface{}) interface{} {
-	if errorValue, ok := err.(error); ok {
-		return errorValue.Error()
+func normalizeError(err any) any {
+	switch localError := err.(type) {
+	case error:
+		return localError.Error()
+	case string:
+		return localError
 	}
+
 	return err
 }
