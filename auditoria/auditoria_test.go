@@ -247,8 +247,9 @@ func TestGetUserInfo(t *testing.T) {
 			t.Fatalf("getUserInfo = (%d, %v), want (200, nil)", status, err)
 		}
 
-		want := usuario{Documento: "123", DocumentoCompuesto: "CC123", Email: "e@u.edu.co", Role: "admin", Sub: "abc"}
-		if user != want {
+		want := usuario{Documento: "123", DocumentoCompuesto: "CC123", Email: "e@u.edu.co", Role: json.RawMessage(`"admin"`), Sub: "abc"}
+		if user.Documento != want.Documento || user.DocumentoCompuesto != want.DocumentoCompuesto ||
+			user.Email != want.Email || string(user.Role) != string(want.Role) || user.Sub != want.Sub {
 			t.Errorf("user = %+v, want %+v", user, want)
 		}
 	})

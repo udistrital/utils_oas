@@ -21,7 +21,9 @@ import (
 const (
 	authorizationKey = "Authorization"
 	userKey          = "user"
-	userInfoURL      = "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo"
+	// AuthenticatedUserKey identifies the complete identity validated by UserInfo.
+	AuthenticatedUserKey = "authenticated_user"
+	userInfoURL          = "https://autenticacion.portaloas.udistrital.edu.co/oauth2/userinfo"
 )
 
 var appName, _ = beego.AppConfig.String("appname")
@@ -29,13 +31,16 @@ var globalLogger = &customSQLLogger{}
 var authHTTPClient = &http.Client{Timeout: 30 * time.Second}
 var c cache.Cache
 
-type usuario struct {
-	Documento          string `json:"documento"`
-	DocumentoCompuesto string `json:"documento_compuesto"`
-	Email              string `json:"email"`
-	Role               string `json:"role"`
-	Sub                string `json:"sub"`
+// AuthenticatedUser contains the identity returned while validating the bearer.
+type AuthenticatedUser struct {
+	Documento          string          `json:"documento"`
+	DocumentoCompuesto string          `json:"documento_compuesto"`
+	Email              string          `json:"email"`
+	Role               json.RawMessage `json:"role"`
+	Sub                string          `json:"sub"`
 }
+
+type usuario = AuthenticatedUser
 
 type requestLog struct {
 	AppName      string         `json:"app_name"`
@@ -125,8 +130,8 @@ func resolveUser(ctx *beegoCtx.Context, enforceAuth bool) {
 	reqCtx := context.WithValue(ctx.Request.Context(), authorizationKey, token)
 	cachedUser, err := c.Get(reqCtx, token)
 	if err == nil {
-		if user, ok := cachedUser.(string); ok && user != "" {
-			ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, user))
+		if user, ok := cachedUser.(AuthenticatedUser); ok && user.Sub != "" {
+			ctx.Request = ctx.Request.WithContext(contextWithAuthenticatedUser(reqCtx, user))
 			return
 		}
 	}
@@ -141,11 +146,22 @@ func resolveUser(ctx *beegoCtx.Context, enforceAuth bool) {
 		return
 	}
 
-	if err := c.Put(reqCtx, token, user.Sub, 60*time.Minute); err != nil {
+	if err := c.Put(reqCtx, token, user, 60*time.Minute); err != nil {
 		logs.Warn("error al guardar el token el cache:", err)
 	}
 
-	ctx.Request = ctx.Request.WithContext(context.WithValue(reqCtx, userKey, user.Sub))
+	ctx.Request = ctx.Request.WithContext(contextWithAuthenticatedUser(reqCtx, user))
+}
+
+func contextWithAuthenticatedUser(ctx context.Context, user AuthenticatedUser) context.Context {
+	ctx = context.WithValue(ctx, userKey, user.Sub)
+	return context.WithValue(ctx, AuthenticatedUserKey, user)
+}
+
+// UserFromContext returns the complete identity attached by the audit middleware.
+func UserFromContext(ctx context.Context) (AuthenticatedUser, bool) {
+	user, ok := ctx.Value(AuthenticatedUserKey).(AuthenticatedUser)
+	return user, ok && user.Sub != ""
 }
 
 func LogRequest(ctx *beegoCtx.Context) {

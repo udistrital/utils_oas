@@ -126,6 +126,9 @@ func TestResolveUserKeepsIdentityWhenTheCacheWriteFails(t *testing.T) {
 	if got := reqCtx.Value(userKey); got != "user-abc" {
 		t.Errorf("userKey = %v, want user-abc despite the failed cache write", got)
 	}
+	if user, ok := UserFromContext(reqCtx); !ok || user.Sub != "user-abc" {
+		t.Errorf("authenticated user = %+v, %v; want user-abc", user, ok)
+	}
 	if got := reqCtx.Value(authorizationKey); got != "Bearer tok-3" {
 		t.Errorf("authorizationKey = %v, want the token", got)
 	}
@@ -136,7 +139,7 @@ func TestResolveUserOnCacheMiss(t *testing.T) {
 	// like any other host rather than bypassed.
 	for _, host := range []string{"api.example.com", "localhost:8080"} {
 		t.Run(host, func(t *testing.T) {
-			stub := setup(t, http.StatusOK, `{"sub":"user-abc"}`)
+			stub := setup(t, http.StatusOK, `{"sub":"user-abc","documento":"123","role":["BIBLIOTECA"]}`)
 			ctx := newCtx(host, "Bearer tok-1")
 
 			if call(ctx, true) {
@@ -153,14 +156,18 @@ func TestResolveUserOnCacheMiss(t *testing.T) {
 			if got := reqCtx.Value(userKey); got != "user-abc" {
 				t.Errorf("userKey = %v, want user-abc", got)
 			}
+			if user, ok := UserFromContext(reqCtx); !ok || user.Sub != "user-abc" || user.Documento != "123" || string(user.Role) != `["BIBLIOTECA"]` {
+				t.Errorf("authenticated user = %+v, %v; want complete user-abc identity", user, ok)
+			}
 			// Downstream service calls read the token from here.
 			if got := reqCtx.Value(authorizationKey); got != "Bearer tok-1" {
 				t.Errorf("authorizationKey = %v, want the token", got)
 			}
 
 			cached, err := c.Get(context.Background(), "Bearer tok-1")
-			if err != nil || cached != "user-abc" {
-				t.Errorf("cache = %v (err %v), want user-abc", cached, err)
+			user, ok := cached.(AuthenticatedUser)
+			if err != nil || !ok || user.Sub != "user-abc" {
+				t.Errorf("cache = %v (err %v), want authenticated user-abc", cached, err)
 			}
 		})
 	}
@@ -168,7 +175,7 @@ func TestResolveUserOnCacheMiss(t *testing.T) {
 
 func TestResolveUserOnCacheHit(t *testing.T) {
 	stub := setup(t, http.StatusOK, `{"sub":"should-not-be-used"}`)
-	if err := c.Put(context.Background(), "Bearer tok-2", "cached-user", time.Minute); err != nil {
+	if err := c.Put(context.Background(), "Bearer tok-2", AuthenticatedUser{Sub: "cached-user", Documento: "123"}, time.Minute); err != nil {
 		t.Fatalf("cache put: %v", err)
 	}
 
@@ -184,6 +191,9 @@ func TestResolveUserOnCacheHit(t *testing.T) {
 	reqCtx := ctx.Request.Context()
 	if got := reqCtx.Value(userKey); got != "cached-user" {
 		t.Errorf("userKey = %v, want cached-user", got)
+	}
+	if user, ok := UserFromContext(reqCtx); !ok || user.Sub != "cached-user" || user.Documento != "123" {
+		t.Errorf("authenticated user = %+v, %v; want cached identity", user, ok)
 	}
 	// Regression guard: the cache-hit path must still carry the token forward.
 	if got := reqCtx.Value(authorizationKey); got != "Bearer tok-2" {
