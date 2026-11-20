@@ -18,10 +18,7 @@ import (
 	"github.com/udistrital/utils_oas/ssm"
 )
 
-const (
-	segmentKey string = "xray_seg"
-	traceIDKey string = "X-Amzn-Trace-Id"
-)
+const traceIDKey string = "X-Amzn-Trace-Id"
 
 var appName = beego.AppConfig.String("appname")
 var globalCtx context.Context
@@ -32,7 +29,7 @@ func Init() {
 	}
 }
 
-// Deprecated. Use Init instead. This function is kept for backward compatibility
+// Deprecated: Use Init instead.
 func InitXRay() error {
 	if err := configureXRay(); err != nil {
 		return err
@@ -43,27 +40,27 @@ func InitXRay() error {
 	return nil
 }
 
-// configureXRay performs the core X-Ray initialization and configuration.
-// Returns an error if configuration fails, or nil if X-Ray is not configured or succeeds.
+// configureXRay configures the X-Ray SDK with the daemon address stored in
+// Parameter Store.
 func configureXRay() error {
 	parameterStore := beego.AppConfig.String("parameterStore")
 	if parameterStore == "" {
-		return fmt.Errorf("no se puede consultar daemon address: %v", errors.New("parameterStore no configurado"))
+		return errors.New("no se puede consultar daemon address: parameterStore no configurado")
 	}
 
 	daemonAddr, err := ssm.GetValueFromParameterStore(context.Background(), fmt.Sprintf("/%s/utils/xray/DaemonAddr", parameterStore))
 	if err != nil {
-		return fmt.Errorf("error consultando daemon address: %v", err)
+		return fmt.Errorf("error consultando daemon address: %w", err)
 	}
 
 	ss, err := xray.NewDefaultStreamingStrategyWithMaxSubsegmentCount(5)
 	if err != nil {
-		return fmt.Errorf("error creando streaming strategy: %v", err)
+		return fmt.Errorf("error creando streaming strategy: %w", err)
 	}
 
 	config := xray.Config{DaemonAddr: daemonAddr, StreamingStrategy: ss}
 	if err := xray.Configure(config); err != nil {
-		return fmt.Errorf("error configurando xray: %v", err)
+		return fmt.Errorf("error configurando xray: %w", err)
 	}
 
 	xray.SetLogger(xraylog.NewDefaultLogger(os.Stdout, xraylog.LogLevelInfo))
@@ -72,12 +69,12 @@ func configureXRay() error {
 	return nil
 }
 
-// Función que crea el segmento principal asociado a la petición entrante
-// y lo almacena en el contexto de la petición para su posterior uso en subsegmentos
-
+// beginSegment is a beego filter that starts the segment for an incoming
+// request and stores it in the request context. Loopback requests are not
+// traced.
 func beginSegment(ctx *beegoCtx.Context) {
 	host := ctx.Input.Context.Request.Host
-	if strings.HasPrefix(host, "localhost") {
+	if isLocalhost(host) {
 		return
 	}
 
@@ -86,30 +83,39 @@ func beginSegment(ctx *beegoCtx.Context) {
 		env = "_test"
 	}
 
-	url := ctx.Input.Scheme() + "://" + host + ctx.Input.Context.Request.URL.String()
-	method := ctx.Request.Method
-	reqCtx, seg := xray.BeginSegment(ctx.Request.Context(), appName+env)
-	seg.HTTP = &xray.HTTPData{
-		Request: &xray.RequestData{Method: method, URL: url},
-	}
-
-	traceID := ctx.Request.Header.Values(traceIDKey)
-	if traceID != nil {
-		h := header.FromString(strings.Trim(traceID[0], "[]"))
-		seg.TraceID = h.TraceID
-		seg.ParentID = h.ParentID
-	}
-
-	reqCtx = context.WithValue(reqCtx, segmentKey, seg)
+	reqCtx := startSegment(ctx.Request, appName+env, ctx.Input.Scheme())
 	ctx.Request = ctx.Request.WithContext(reqCtx)
-
 	globalCtx = reqCtx
 }
 
-// Actualiza y cierra el segmento asociado a la petición entrante
+// startSegment starts the segment for r, continuing the upstream trace when r
+// carries a trace header, and returns a context that holds it.
+func startSegment(r *http.Request, name, scheme string) context.Context {
+	var (
+		ctx context.Context
+		seg *xray.Segment
+	)
+	if traceHeader := r.Header.Get(traceIDKey); traceHeader != "" {
+		h := header.FromString(strings.Trim(traceHeader, "[]"))
+		ctx, seg = xray.NewSegmentFromHeader(r.Context(), name, r, h)
+	} else {
+		ctx, seg = xray.BeginSegment(r.Context(), name)
+	}
+
+	// The SDK records request data only in xray.Handler, which beego does not use.
+	seg.HTTP = &xray.HTTPData{
+		Request: &xray.RequestData{
+			Method: r.Method,
+			URL:    scheme + "://" + r.Host + r.URL.RequestURI(),
+		},
+	}
+
+	return ctx
+}
+
 func EndSegment(ctx *beegoCtx.Context) {
-	seg, ok := ctx.Request.Context().Value(segmentKey).(*xray.Segment)
-	if !ok || seg == nil {
+	seg := xray.GetSegment(ctx.Request.Context())
+	if seg == nil {
 		return
 	}
 
@@ -125,10 +131,10 @@ func EndSegment(ctx *beegoCtx.Context) {
 	seg.Close(nil)
 }
 
-// BeginSubsegment starts an X-Ray subsegment for an outgoing HTTP request.
-// It sets the trace propagation header on req and returns the updated context and subsegment
+// BeginSubsegment starts a subsegment for the outgoing request req and sets
+// its trace propagation header. If ctx has no segment, it returns ctx and nil.
 func BeginSubsegment(ctx context.Context, req *http.Request) (context.Context, *xray.Segment) {
-	if xray.GetSegment(ctx) == nil || req == nil {
+	if ctx == nil || req == nil || xray.GetSegment(ctx) == nil {
 		return ctx, nil
 	}
 
@@ -152,7 +158,7 @@ func CloseSubsegment(subseg *xray.Segment, resp *http.Response, err error) {
 	if resp != nil {
 		statusCode = resp.StatusCode
 	} else if err != nil {
-		// added to show non instrumented services in xray
+		// Without a response, record a gateway error so the call shows as failed.
 		var netErr net.Error
 		if (errors.As(err, &netErr) && netErr.Timeout()) || errors.Is(err, context.DeadlineExceeded) {
 			statusCode = http.StatusGatewayTimeout
@@ -165,7 +171,24 @@ func CloseSubsegment(subseg *xray.Segment, resp *http.Response, err error) {
 	subseg.Close(err)
 }
 
+// BeginSegmentSec starts a subsegment for req under the most recently traced
+// incoming request. It returns nil if there is none.
 func BeginSegmentSec(req *http.Request) *xray.Segment {
 	_, seg := BeginSubsegment(globalCtx, req)
 	return seg
+}
+
+// isLocalhost reports whether host, optionally with a port, is "localhost"
+// or a loopback IP.
+func isLocalhost(host string) bool {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.Trim(host, "[]")
+
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
