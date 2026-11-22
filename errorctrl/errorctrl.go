@@ -46,7 +46,7 @@ func ErrorControlController(c beego.Controller, controller string) {
 		c.Data["json"] = map[string]any{
 			"Data":    data,
 			"Message": message,
-			"Status":  strconv.Itoa(statusCode),
+			"Status":  statusCode,
 			"Success": false,
 		}
 
